@@ -1,14 +1,16 @@
 import  sys,os
+
+from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
-from PyQt5.QtGui import QCloseEvent,QColor,QIcon,QMouseEvent,QCursor
-from PyQt5.QtWidgets import  QWidget,QHBoxLayout,QApplication,QMenu,QAction,QMessageBox
+from PyQt5.QtGui import QCloseEvent, QColor, QIcon, QMouseEvent, QCursor, QPixmap
+from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout, QApplication, QMenu, QAction, QMessageBox
 #from src.color_platte import get_average_clor
 from src.RGB import RGBBar
 from src.Lab import LabChart
 from src.Jch import JchChart
 from src.hue import HueChart
 from src.record import RecordForm
-from src.screenshoot import getAverageColor
+from src.screenshoot import Screenshoot
 
 
 #rom src.color_picker import ScaleWindow
@@ -30,9 +32,20 @@ class App(QWidget):
         self._initSignals()
         self.customContextMenuRequested.connect(self.rightmenu)
         self.show()
+        self.shot1.show()
     def rightmenu(self):
         self.menu.popup(QCursor.pos())
+
+
     def _initUI(self):
+        # square screenshot widget
+        # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+        # qtApp = QApplication(sys.argv)
+
+
+
+        # qtApp.exec()
+        self.shot1=Screenshoot()
         self.rgb_bar=RGBBar(self)
         self.lab_bar=LabChart(self)
         self.jch_bar=JchChart(self)
@@ -53,24 +66,29 @@ class App(QWidget):
         self.widget_keys={}
         self.record_keys={}
         self.menu=QMenu(self)
-        self.register_action(self.rgb_bar,"RGB")
-        self.register_action(self.hsv_bar, "HSV")
-        self.register_action(self.jch_bar, "JCh")
-        self.register_action(self.lab_bar, "Lab")
-        self.action_quit=QAction("退出",self)
-        self.menu.addAction(self.action_quit)
-        self.action_quit.triggered.connect(self.close)
         self.submenu=QMenu("Record",self.menu)
+        self.submenu_palette=QMenu("ColorSpace",self.menu)
+        self.register_action(self.rgb_bar,self.submenu_palette,"RGB")
+        self.register_action(self.hsv_bar,self.submenu_palette, "HSV")
+        self.register_action(self.jch_bar,self.submenu_palette, "JCh")
+        self.register_action(self.lab_bar,self.submenu_palette, "Lab")
         self.register_record_action(self.submenu,self.hsv_bar,"HSV")
         self.register_record_action(self.submenu,self.jch_bar,"Jch")
         self.register_record_action(self.submenu,self.rgb_bar,"RGB")
+        self.register_record_action(self.submenu,self.lab_bar,"Lab")
         self.menu.addMenu(self.submenu)
+        self.menu.addMenu(self.submenu_palette)
+
+
+        self.action_quit=QAction("退出",self)
+        self.menu.addAction(self.action_quit)
+        self.action_quit.triggered.connect(self.close)
+        self.action_quit.triggered.connect(self.shot1.close)
 
     def register_record_action(self,submenu,wid,tex="RGB"):
         act=QAction(tex,self)
         act.setCheckable(True)
         submenu.addAction(act)
-
         self.record_keys[tex]=[wid,act]
         act.triggered.connect(lambda :self.connect_record(tex))
     def connect_record(self,key):
@@ -86,13 +104,17 @@ class App(QWidget):
         for act in self.action_keys.values():
             if act.isChecked():num+=1
         return num
-    def create_checkale_action(self,name,icon=None):
+    def create_checkale_action(self,name,submenu=None,icon=None):
         act=QAction(name,self)
         act.setCheckable(True)
-        self.menu.addAction(act)
+        if submenu is None:
+            self.menu.addAction(act)
+        else:
+            submenu.addAction(act)
         return act
-    def register_action(self,widget,key=""):
-        action_i=self.create_checkale_action(key)
+    def register_action(self,widget,submenu=None,key=""):
+
+        action_i=self.create_checkale_action(key,submenu=submenu)
         action_i.setChecked(True)
         self.action_keys[key]=action_i
         self.widget_keys[action_i]=widget
@@ -118,10 +140,12 @@ class App(QWidget):
     def update_width(self):
         w=0
         for wid in self.bar_widgets:
-            w+=wid.width()*1.2
+            if wid.isVisible():
+                w+=wid.width()*1.2
         self.setFixedSize(QSize(int(w),200))
     def _initSignals(self):
         self.ctrled=0
+        self.shifted=0
         self.cur=None
         self.cursor_moved.connect(self.handleCursorMove)
         self.timer=QTimer(self)
@@ -136,7 +160,7 @@ class App(QWidget):
 
     ## ------- mouse move cursor
     def handleCursorMove(self,pos):
-        (r,g,b),screenshoot=getAverageColor(pos.x(),pos.y())
+        (r,g,b),screenshoot=self.shot1.getAverageColor(pos.x(),pos.y())
         for wid  in self.widget_keys.values():
             wid.pick_color(r,g,b)
 
@@ -147,10 +171,24 @@ class App(QWidget):
         if (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(192) and self.ctrled) :
             self.ctrled=0
             self.hot_key_event("")
+        if (win32api.GetAsyncKeyState(win32con.VK_SHIFT) and not win32api.GetAsyncKeyState(192)):
+            self.shifted=1
+        if (win32api.GetAsyncKeyState(win32con.VK_SHIFT) and  win32api.GetAsyncKeyState(192) and self.shifted) :
+            res = self.shot1.getCustomColor()
+            if res is not None:
+                (r, g, b), screenshoot=res
+                for wid in self.widget_keys.values():
+                    wid.pick_color(r, g, b)
+                self.hot_key_event("")
+            self.shifted=0
+            self.ctrled=0
         pos=QCursor.pos()
         if pos!=self.cur:
             self.cur=pos
             self.cursor_moved.emit(pos)
+        (r, g, b), screenshoot = self.shot1.getAverageColor(pos.x(), pos.y())
+        for wid in self.widget_keys.values():
+            wid.pick_color(r, g, b)
     def hot_key_event(self,message):
         for wid in self.bar_widgets:
             wid.freeze_cursor()

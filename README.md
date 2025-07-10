@@ -14,3 +14,7 @@ example
     up : ctrl + 1
     down : ctrl + 2
     reset : ctrl + 0
+
+
+## fork
+pyqt_screenshot forked from pyqt_screenshot
