@@ -15,6 +15,19 @@ example
     down : ctrl + 2
     reset : ctrl + 0
 
-
+## update log
+- 20250710:
+    - add custom screenashot color picker (average) : shift + `
+    - add custom hover color picker size(average) : 
+      - zoon in : ctrl + 1
+      - zoon out : ctrl + 2
+      - reset : ctrl + 0
+    - widget layout adapted to widgets number
+    - colorspace menuitems are moved to subfolder
+- 20250410:
+    - add custom hover color picker (point) : ctrl + `
+    - show or hide any colorspace widget
+    - switch to different color value recoder
+    - 
 ## fork
 pyqt_screenshot forked from pyqt_screenshot
