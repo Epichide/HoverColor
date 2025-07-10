@@ -85,7 +85,8 @@ class Screenshoot(QWidget):
     def pullCursor(self):
         import win32api,win32con
         step=2
-        if (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and not (win32api.GetAsyncKeyState(0x31) or win32api.GetAsyncKeyState(0x32)) ):
+        if (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and
+                not (win32api.GetAsyncKeyState(0x31) or win32api.GetAsyncKeyState(0x32)or win32api.GetAsyncKeyState(0x30)) ):
             self.ctrled=1
             self.show()
         elif (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(0x31) and self.ctrled) :
