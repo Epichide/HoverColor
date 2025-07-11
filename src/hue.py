@@ -21,6 +21,8 @@ except:
     from basepanel import  BaseWidget
 
 class HueChart(BaseWidget):
+    colorspace = "HSV"
+    metric = ""
     def __init__(self,parent=None,mode="hsv"):
         super().__init__(parent)
         self.setFixedSize(200,200)
@@ -64,9 +66,9 @@ class HueChart(BaseWidget):
         nsize=500
         x=np.linspace(-1,1,nsize)
         y=np.linspace(-1,1,nsize)
-        x,y=np.mgrid[-1:1:nsize*1j,-1:1:nsize*1j]
+        y,x=np.mgrid[-1:1:nsize*1j,1:-1:nsize*-1j]
         S=x*x+y*y
-        ang=np.arctan2(y,x)+np.pi
+        ang=np.arctan2(y,x)+np.pi-np.pi/6
         H=ang/np.pi/2
         A=np.ones([nsize,nsize,1],dtype=np.uint8)*255
         A[:,:,0][S>1]=0
@@ -93,8 +95,8 @@ class HueChart(BaseWidget):
         self.luma_cur.move(QPoint(0,self.bar_length*(1-v)-self.luma_cur.height()/2))
         s_ratio=np.sqrt(s)
         h_ratio=h
-        dx=np.cos(h_ratio*2*np.pi)*s_ratio*self.pie_radius
-        dy=np.sin(h_ratio*2*np.pi)*s_ratio*self.pie_radius
+        dy=-np.cos(h_ratio*2*np.pi+np.pi/6)*s_ratio*self.pie_radius
+        dx=np.sin(h_ratio*2*np.pi+np.pi/6)*s_ratio*self.pie_radius
         self.pie_center=(
             QPoint(self.pie_radius,self.pie_radius)-
             QPoint(self.hue_cur.height()/2,self.hue_cur.height()/2)
@@ -107,7 +109,7 @@ class HueChart(BaseWidget):
         s = min(255, s * 255)
         color_string = ",".join([str(r), str(g), str(b)])
         self.hue_cur.setStyleSheet("Qlabel{background-color: rgb(" + color_string + ");}")
-        self.pos_value_signal.emit(h,s,v)
+        self.pos_value_signal.emit([h,s,v])
         return h,s,v
     def add_pos_hue_widget(self,wid,tex=""):
         pos_wid=QLabel(wid)

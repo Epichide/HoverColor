@@ -88,7 +88,7 @@ class Screenshoot(QWidget):
         if (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and
                 not (win32api.GetAsyncKeyState(0x31) or win32api.GetAsyncKeyState(0x32)or win32api.GetAsyncKeyState(0x30)) ):
             self.ctrled=1
-            self.show()
+            self.hide()
         elif (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(0x31) and self.ctrled) :
             self.ctrled=0
             width=self.width()

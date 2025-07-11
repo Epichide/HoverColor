@@ -21,6 +21,8 @@ try:
 except:
     from hue import  HueChart
 class JchChart(HueChart):
+    colorspace = "Jch"
+    metric = ""
     def __init__(self,parent=None,mode="hsv"):
         super().__init__(parent)
         self.load_jch_img()
@@ -48,8 +50,8 @@ class JchChart(HueChart):
         self.pie_radius=self.hue.height()/2
         s_ratio =  c/100
         h_ratio = h/360
-        dx = np.cos(h_ratio * 2 * np.pi) * s_ratio * self.pie_radius
-        dy = np.sin(h_ratio * 2 * np.pi) * s_ratio * self.pie_radius
+        dy = -np.cos(h_ratio * 2 * np.pi) * s_ratio * self.pie_radius
+        dx = np.sin(h_ratio * 2 * np.pi) * s_ratio * self.pie_radius
 
         self.luma_cur.move(QPoint(0,self.bar_length*(1-v/100)-self.luma_cur.height()/2))
         self.pie_center=(
@@ -62,13 +64,13 @@ class JchChart(HueChart):
 
         color_string = ",".join([str(r), str(g), str(b)])
         self.hue_cur.setStyleSheet("Qlabel{background-color: rgb(" + color_string + ");}")
-        self.pos_value_signal.emit(v,c,h)
+        self.pos_value_signal.emit([v,c,h])
         return v,c,h
 
 def create_jch_img(l=50,nsize=500):
     x=np.linspace(-1,1,nsize)
     y=np.linspace(-1,1,nsize)
-    x,y=np.mgrid[-1:1:nsize*1j,-1:1:nsize*1j]
+    y,x=np.mgrid[-1:1:nsize*1j,1:-1:nsize*-1j]
 
     A=np.ones([nsize,nsize,1],dtype=np.uint8)*255
     C=np.sqrt(x*x+y*y)

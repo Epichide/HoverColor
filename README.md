@@ -16,6 +16,12 @@ example
     reset : ctrl + 0
 
 ## update log
+- 20250712：
+  - adjust colorwidget angle : red is on top-right
+  - add [deltaE(2020)](https://github.com/lovro-i/CIEDE2000/blob/master/ciede2000.py)
+  - add RGB+G record
+  - TODO : icc profile
+  - TODO :more deltaE formula
 - 20250710:
     - add custom screenashot color picker (average) : shift + `
     - add custom hover color picker size(average) : 
