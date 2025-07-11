@@ -23,7 +23,7 @@ example
   - TODO : icc profile
   - TODO :more deltaE formula
 - 20250710:
-    - add custom screenashot color picker (average) : shift + `
+    - add custom [screenashot](https://github.com/SeptemberHX/screenshot) color picker (average) : shift + `
     - add custom hover color picker size(average) : 
       - zoon in : ctrl + 1
       - zoon out : ctrl + 2
@@ -35,5 +35,3 @@ example
     - show or hide any colorspace widget
     - switch to different color value recoder
     - 
-## fork
-pyqt_screenshot forked from pyqt_screenshot
