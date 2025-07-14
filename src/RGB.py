@@ -15,11 +15,12 @@ from PyQt5.QtWidgets import  (QWidget,QHBoxLayout,QFrame,QLabel,
                               QApplication,QMenu,QAction,QMessageBox)
 from .basepanel import  BaseWidget
 class RGBBar(BaseWidget):
-    colorspace = "RGB"
-    metric = "G"
+
     def __init__(self,parent=None):
         super(RGBBar,self).__init__(parent)
         self.setFixedSize(50,150)
+        self.colorspace = "RGB"
+        self.metric = "G"
         self.horizontallayout=QHBoxLayout(self)
         self.horizontallayout.setContentsMargins(0,0,0,0)
         self.red=QFrame(self)

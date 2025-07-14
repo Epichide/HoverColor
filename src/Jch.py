@@ -21,10 +21,11 @@ try:
 except:
     from hue import  HueChart
 class JchChart(HueChart):
-    colorspace = "Jch"
-    metric = ""
+
     def __init__(self,parent=None,mode="hsv"):
         super().__init__(parent)
+        self.colorspace = "Jch"
+        self.metric = ""
         self.load_jch_img()
     def load_jch_img(self):
         nsize=500

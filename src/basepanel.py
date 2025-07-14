@@ -11,8 +11,7 @@ from PyQt5.QtGui import QCloseEvent,QColor,QIcon,QMouseEvent,QCursor
 from PyQt5.QtWidgets import  QWidget,QHBoxLayout,QApplication,QMenu,QAction,QMessageBox
 
 class BaseWidget(QWidget):
-    colorspace = ""
-    metric = ""
+
     pos_value_signal=pyqtSignal(list)
     def pick_color(self,v1,v2,v3):
         pass

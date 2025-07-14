@@ -168,6 +168,7 @@ class Screenshot(QGraphicsView):
             self.setCursorStyle()
             self.redraw()
         else:
+            self.curpos=QCursor.pos()
             self.endX, self.endY = event.x(), event.y()
 
             # if self.mousePosition != OUTSIDE_AREA:
@@ -527,8 +528,8 @@ class Screenshot(QGraphicsView):
                     dest.setY(rect.top() + spacing)
                 else:
                     dest.setY(rect.top() - self.tooBar.height() - pen_set_bar_height - spacing)
-
-            self.tooBar.move(dest.toPoint())
+            curpos=self.curpos-QPoint(self.tooBar.width(),0)
+            self.tooBar.move(curpos)
 
             if self.penSetBar is not None:
                 self.penSetBar.show()

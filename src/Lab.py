@@ -20,12 +20,13 @@ try:
 except:
     from  hue import  HueChart
 class LabChart(HueChart):
-    Lab_1=None
-    Lab_2=None
-    colorspace = "Lab"
-    metric = "ΔE2020"
+
     def __init__(self,parent=None,mode="hsv"):
         super().__init__(parent)
+        self.Lab_1 = None
+        self.Lab_2 = None
+        self.colorspace = "Lab"
+        self.metric = "ΔE2020"
         self.load_lab_img()
     def load_lab_img(self):
         nsize=500

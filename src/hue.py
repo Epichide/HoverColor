@@ -21,10 +21,11 @@ except:
     from basepanel import  BaseWidget
 
 class HueChart(BaseWidget):
-    colorspace = "HSV"
-    metric = ""
+
     def __init__(self,parent=None,mode="hsv"):
         super().__init__(parent)
+        self.colorspace = "HSV"
+        self.metric = ""
         self.setFixedSize(200,200)
         self.hue=QLabel(self)
         self.hue.setGeometry(QtCore.QRect(10,10,150,150))
