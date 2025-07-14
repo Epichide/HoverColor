@@ -28,7 +28,7 @@ class Screenshoot(QWidget):
         self.setMinimumWidth(self.default_width)
         self.setMinimumHeight(self.default_height)
         self.setGeometry((QtCore.QRect(5, 5, self.default_width, self.default_height)))
-        print(11111,self.height(),self.width())
+        # print(11111,self.height(),self.width())
         self.qbox=QHBoxLayout()
         self.qbox.setContentsMargins(0,0,0,0)
         # self.setContentsMargins(0,0,0,0)

@@ -16,6 +16,10 @@ example
     reset : ctrl + 0
 
 ## update log
+- 20250715:
+  - support : AutoAdjust Scaling when screen resolution changes
+  - fix bug : multi screen crash : move from one screen to another
+  - support : minimize and restore widget
 - 20250712：
   - adjust colorwidget angle : red is on top-right
   - add [deltaE(2020)](https://github.com/lovro-i/CIEDE2000/blob/master/ciede2000.py)

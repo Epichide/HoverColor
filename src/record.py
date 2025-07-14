@@ -7,7 +7,7 @@
 # @Software: PyCharm
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
-from PyQt5.QtGui import QCloseEvent,QColor,QIcon,QMouseEvent,QCursor
+from PyQt5.QtGui import QCloseEvent, QColor, QFont, QIcon, QMouseEvent, QCursor
 from PyQt5.QtWidgets import  (QWidget,QHBoxLayout,QFrame,QLabel,QTableWidget,
                               QApplication,QMenu,QAction,QMessageBox)
 
@@ -19,14 +19,28 @@ class RecordForm(QTableWidget):
         self.ncol=2
         self.func=None
         self.connected_wid=None
-        self.setFixedSize(160,175)
-        self.setColumnCount(0)
-        self.setRowCount(5)
+        self.defaultHeight=175
+        self.setMinimumSize(1,1)
+        self.setGeometry(QtCore.QRect(0, 0, 160, self.defaultHeight))
+        # self.setFixedSize(160,self.defaultHeight)
+        self.setFixedWidth(160)
+        self.setColumnCount(self.ncol)
+        self.setRowCount(self.nrow)
         self.horizontalHeader().setVisible(True)
         self.horizontalHeader().setCascadingSectionResizes(True)
         self.verticalHeader().setVisible(False)
-        self.verticalHeader().setCascadingSectionResizes(False)
+        self.verticalHeader().setCascadingSectionResizes(True)
+        self.setHorizontalScrollBarPolicy( Qt.ScrollBarAlwaysOff )
+        self.setVerticalScrollBarPolicy( Qt.ScrollBarAlwaysOff )
+        self.verticalScrollBar().setDisabled(True)
+        self.setAutoScroll(False)
         self.setShowGrid(False)
+        # self.setAttribute(Qt.AA_EnableHighDpiScaling)
+        # self.verticalHeader().setDefaultSectionSize(self.defaultHeight / (self.nrow + 1))
+        # heads = self.horizontalHeader()
+        # heads.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        self.setColumnWidth(0,100)
+        self.setColumnWidth(1,60)
         self.init_ui()
         self.setStyleSheet(
             "QTableView::item::selected"
@@ -40,6 +54,7 @@ class RecordForm(QTableWidget):
             "border: none"
             "}"
         )
+
     def dis_connect_wid(self):
         if self.connected_wid:
             self.connected_wid.pos_value_signal.disconnect(self.func)
@@ -60,7 +75,7 @@ class RecordForm(QTableWidget):
         wid.pos_value_signal.connect(self.func)
         self.connected_wid=wid
         self.setHorizontalHeaderLabels([colorspace,metric])
-        print(head)
+        print("Record Connect : ",head)
     def update_value(self,values):
         if len(values)==3:
             x,y,z=values
@@ -74,29 +89,45 @@ class RecordForm(QTableWidget):
         x,y,z=round(x),round(y),round(z)
         item=self.item(0,0)
         item.setText(",".join([str(x),str(y),str(z)]))
+        self.horizontalHeader().setFixedHeight(self.defaultHeight / (self.nrow + 1))
+        self.verticalHeader().setDefaultSectionSize(self.defaultHeight / (self.nrow + 1))
+        self.verticalHeader().setMinimumSectionSize(self.defaultHeight / (self.nrow + 1))
+        # print(self.verticalHeader().minimumSectionSize())
+        # self.setRowHeight(1, 5)
+        # print(self.rowHeight(1))
+        # # self.verticalHeader().setDefaultSectionSize(self.defaultHeight/10.0 / (self.nrow + 1)/1.0)
+        # # self.verticalHeader().setMinimumSectionSize(self.defaultHeight/10.0 / (self.nrow + 1)/1.0)
+        # for i in range(0,self.nrow):
+        #     self.setRowHeight(i,self.defaultHeight / (self.nrow + 1))
     def init_ui(self):
+
+        font=self.font()
+        font.setPixelSize(self.defaultHeight/(self.nrow+1)/2)
+        self.setFont(font)
         item=QtWidgets.QTableWidgetItem()
         item.setTextAlignment(Qt.AlignCenter)
-        self.setColumnCount(2)
-        self.setColumnWidth(0,100)
-        self.setColumnWidth(1,60)
-        # self.insertColumn(0)
-        self.setHorizontalHeaderLabels(["Value", "deltaE"])
 
-        for i in range(1,self.nrow+1):
+        self.setHorizontalHeaderLabels(["Value", "deltaE"])
+        # self.setRowHeight(0, 1)
+
+        for i in range(0,self.nrow):
             for j in range(self.ncol):
                 item=QtWidgets.QTableWidgetItem()
                 item.setFlags(item.flags() & ~Qt.ItemIsEditable)
                 item.setTextAlignment(Qt.AlignCenter)
                 item.setText("")
+                font=item.font()
+                item.setFont(font)
                 item.setBackground(QColor(220,220,220))
-                self.setItem(i-1,j,item)
+                self.setItem(i,j,item)
         for col in range(self.ncol):
             item=self.item(0,col)
             font=item.font()
             font.setBold(True)
+            # font.setPointSize(self.defaultHeight / (self.nrow + 1)/8)
             item.setFont(font)
             item.setBackground(QColor(255,255,255))
+
     def freeze_cursor(self):
         for row in range(self.nrow-1,0,-1):
             for col in range(self.ncol):

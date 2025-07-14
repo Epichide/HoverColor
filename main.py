@@ -25,7 +25,8 @@ class App(QWidget):
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
+                             |Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setMouseTracking(True)
         self._initUI()
@@ -212,6 +213,7 @@ class App(QWidget):
 
 if __name__ == '__main__':
     app=QApplication(sys.argv)
+    # QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     ex=App()
     r=app.exec_()
     sys.exit(r)
