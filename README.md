@@ -16,6 +16,10 @@ example
     reset : ctrl + 0
 
 ## update log
+- 20250717:
+  - global hotkey setting
+  - fix delta2020 -> 2000
+  - TODO : add some restricts for key binding
 - 20250715:
   - support : AutoAdjust Scaling when screen resolution changes
   - fix bug : multi screen crash : move from one screen to another
