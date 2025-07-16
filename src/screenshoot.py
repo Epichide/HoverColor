@@ -14,7 +14,7 @@ from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
 from src.pyqt_screenshot import constant
 from src.pyqt_screenshot.screenshot import Screenshot
 
-
+from .hotkeys_utils.response_key import GLOBAL_PRESS
 class Screenshoot(QWidget):
     cursor_moved = pyqtSignal(object)
     def __init__(self,*args,**kwargs):
@@ -82,25 +82,51 @@ class Screenshoot(QWidget):
         self.move(self.mapToParent(cur))
         self.press_pos=self.pos()
 
+    # def pullCursor(self):
+    #     import win32api,win32con
+    #     step=2
+    #     if (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and
+    #             not (win32api.GetAsyncKeyState(0x31) or win32api.GetAsyncKeyState(0x32)or win32api.GetAsyncKeyState(0x30)) ):
+    #         self.ctrled=1
+    #         self.hide()
+    #     elif (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(0x31) and self.ctrled) :
+    #         self.ctrled=0
+    #         width=self.width()
+    #         self.setFixedSize(width+step,width+step)
+    #         self.show()
+    #         print("222", self.width(), self.height(), self.label.width(), self.label.height())
+    #     elif (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(0x30) and self.ctrled) :
+    #         self.ctrled=0
+    #         self.setFixedSize(self.default_width,self.default_height)
+    #         # self.hot_key_event("")
+    #         self.show()
+    #     elif (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(0x32) and self.ctrled) :
+    #         self.ctrled=0
+    #         width = self.width()
+    #         if width-step>=5:
+    #             self.setFixedSize(width - step, width - step)
+    #         # print("222", self.width(), self.height(), self.label.width(), self.label.height())
+    #         self.show()
+    #     else:self.hide()
+    #     pos=QCursor.pos()
+    #     # if pos!=self.cur:
+    #     self.cur=pos
+    #     self.cursor_moved.emit(pos)
     def pullCursor(self):
         import win32api,win32con
         step=2
-        if (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and
-                not (win32api.GetAsyncKeyState(0x31) or win32api.GetAsyncKeyState(0x32)or win32api.GetAsyncKeyState(0x30)) ):
-            self.ctrled=1
-            self.hide()
-        elif (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(0x31) and self.ctrled) :
+        if (Qt.Key_Control in GLOBAL_PRESS and  Qt.Key_1 in GLOBAL_PRESS) :
             self.ctrled=0
             width=self.width()
             self.setFixedSize(width+step,width+step)
             self.show()
-            print("222", self.width(), self.height(), self.label.width(), self.label.height())
-        elif (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(0x30) and self.ctrled) :
+            # print("222", self.width(), self.height(), self.label.width(), self.label.height())
+        elif (Qt.Key_Control in GLOBAL_PRESS and  Qt.Key_0 in GLOBAL_PRESS)  :
             self.ctrled=0
             self.setFixedSize(self.default_width,self.default_height)
             # self.hot_key_event("")
             self.show()
-        elif (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(0x32) and self.ctrled) :
+        elif (Qt.Key_Control in GLOBAL_PRESS and  Qt.Key_2 in GLOBAL_PRESS) :
             self.ctrled=0
             width = self.width()
             if width-step>=5:

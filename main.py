@@ -1,7 +1,7 @@
 import  sys,os
 
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
+from PyQt5.QtCore import QEventLoop, Qt, pyqtSlot, QPoint, pyqtSignal, QTimer, QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon, QMouseEvent, QCursor, QPixmap
 from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout, QApplication, QMenu, QAction, QMessageBox
 #from src.color_platte import get_average_clor
@@ -11,9 +11,10 @@ from src.Jch import JchChart
 from src.hue import HueChart
 from src.record import RecordForm
 from src.screenshoot import Screenshoot
-
+from src.hotkeys_utils.hotkey_wid import HotKeyWindow, HotkeyPicker
 
 #rom src.color_picker import ScaleWindow
+
 
 
 class App(QWidget):
@@ -29,6 +30,8 @@ class App(QWidget):
                              |Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setMouseTracking(True)
+        self.hotkey_funcs={}
+        self.hotkey_workeds={}
         self._initUI()
         self._initSignals()
         self.customContextMenuRequested.connect(self.rightmenu)
@@ -42,8 +45,6 @@ class App(QWidget):
         # square screenshot widget
         # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
         # qtApp = QApplication(sys.argv)
-
-
 
         # qtApp.exec()
         self.shot1=Screenshoot()
@@ -148,15 +149,45 @@ class App(QWidget):
         self.ctrled=0
         self.shifted=0
         self.cur=None
+        self.m_flag=False
+
         self.cursor_moved.connect(self.handleCursorMove)
         self.timer=QTimer(self)
         self.timer.setInterval(50)
         self.timer.timeout.connect(self.pullCursor)
         self.timer.start()
-        self.m_flag=False
         self.press_pos=self.pos()
         self.connect_record("HSV")
+        # register hotkey
+        self.register_hotkey([Qt.Key_Shift,Qt.Key_QuoteLeft],self.getCustomColor,"Screen Pick")
+        self.register_hotkey([Qt.Key_Control,Qt.Key_QuoteLeft],self.hot_key_event,"Pixel Pick")
 
+    def register_hotkey(self,qtkeys,func,funcname):
+        qtkeys_str=",".join([str(vk) for vk in qtkeys])
+        self.hotkey_funcs[qtkeys_str]=[func,funcname]
+        self.hotkey_workeds[qtkeys_str]=False
+    def unset_hotkey_funcworked(self):
+        for k in self.hotkey_workeds.keys():
+            self.hotkey_workeds[k]=False
+
+
+    def Hotkey_Setting(self):
+        loop = QEventLoop()
+        screen_shot = HotKeyWindow(self)
+        screen_shot.show()
+        screen_shot.widget_closed.connect(loop.quit)
+
+        loop.exec()
+        img = screen_shot.target_img
+        return img
+
+    def getCustomColor(self):
+        res = self.shot1.getCustomColor()
+        if res is not None:
+            (r, g, b), screenshoot = res
+            for wid in self.widget_keys.values():
+                wid.pick_color(r, g, b)
+            self.hot_key_event("")
 
 
     ## ------- mouse move cursor
@@ -165,24 +196,44 @@ class App(QWidget):
         for wid  in self.widget_keys.values():
             wid.pick_color(r,g,b)
 
+    # def pullCursor(self):
+    #     import win32api,win32con
+    #     if (Qt.Key_Control in GLOBAL_PRESS) and len(GLOBAL_PRESS)==1:
+    #         self.ctrled=1
+    #     if (Qt.Key_Shift in GLOBAL_PRESS) and len(GLOBAL_PRESS)==1:
+    #         self.shifted=1
+    #     if (Qt.Key_Control in GLOBAL_PRESS and  Qt.Key_QuoteLeft in GLOBAL_PRESS) and self.ctrled:
+    #         self.ctrled=0
+    #         self.hot_key_event("")
+    #
+    #     if (Qt.Key_Shift in GLOBAL_PRESS and  Qt.Key_QuoteLeft in GLOBAL_PRESS) and self.shifted:
+    #         self.shifted=0
+    #         res = self.shot1.getCustomColor()
+    #         if res is not None:
+    #             (r, g, b), screenshoot=res
+    #             for wid in self.widget_keys.values():
+    #                 wid.pick_color(r, g, b)
+    #             self.hot_key_event("")
+    #         self.shifted=0
+    #         self.ctrled=0
+    #     pos=QCursor.pos()
+    #     if pos!=self.cur:
+    #         self.cur=pos
+    #         self.cursor_moved.emit(pos)
+    #     (r, g, b), screenshoot = self.shot1.getAverageColor(pos.x(), pos.y())
+    #     for wid in self.widget_keys.values():
+    #         wid.pick_color(r, g, b)
     def pullCursor(self):
         import win32api,win32con
-        if (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and not win32api.GetAsyncKeyState(192)):
-            self.ctrled=1
-        if (win32api.GetAsyncKeyState(win32con.VK_CONTROL) and  win32api.GetAsyncKeyState(192) and self.ctrled) :
-            self.ctrled=0
-            self.hot_key_event("")
-        if (win32api.GetAsyncKeyState(win32con.VK_SHIFT) and not win32api.GetAsyncKeyState(192)):
-            self.shifted=1
-        if (win32api.GetAsyncKeyState(win32con.VK_SHIFT) and  win32api.GetAsyncKeyState(192) and self.shifted) :
-            res = self.shot1.getCustomColor()
-            if res is not None:
-                (r, g, b), screenshoot=res
-                for wid in self.widget_keys.values():
-                    wid.pick_color(r, g, b)
-                self.hot_key_event("")
-            self.shifted=0
-            self.ctrled=0
+        GLOBAL_PRESS_str=",".join([str(vk) for  vk in GLOBAL_PRESS])
+        if GLOBAL_PRESS_str in self.hotkey_funcs :
+            if self.hotkey_workeds[GLOBAL_PRESS_str] is False:
+                self.unset_hotkey_funcworked()
+                self.hotkey_workeds[GLOBAL_PRESS_str]=True
+                self.hotkey_funcs[GLOBAL_PRESS_str][0]()
+        else:
+            self.unset_hotkey_funcworked()
+
         pos=QCursor.pos()
         if pos!=self.cur:
             self.cur=pos
@@ -190,7 +241,7 @@ class App(QWidget):
         (r, g, b), screenshoot = self.shot1.getAverageColor(pos.x(), pos.y())
         for wid in self.widget_keys.values():
             wid.pick_color(r, g, b)
-    def hot_key_event(self,message):
+    def hot_key_event(self,message=""):
         for wid in self.bar_widgets:
             wid.freeze_cursor()
         return message
@@ -210,10 +261,13 @@ class App(QWidget):
             cur=event.pos()-self.press_pos
             self.move(self.mapToParent(cur))
             event.accept()
-
+from src.hotkeys_utils.response_key import GLOBAL_PRESS, listener
 if __name__ == '__main__':
     app=QApplication(sys.argv)
+    listener.start()
     # QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     ex=App()
     r=app.exec_()
     sys.exit(r)
+    listener.join()
+

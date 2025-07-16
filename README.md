@@ -22,7 +22,7 @@ example
   - support : minimize and restore widget
 - 20250712：
   - adjust colorwidget angle : red is on top-right
-  - add [deltaE(2020)](https://github.com/lovro-i/CIEDE2000/blob/master/ciede2000.py)
+  - add [deltaE(2000)](https://github.com/lovro-i/CIEDE2000/blob/master/ciede2000.py)
   - add RGB+G record
   - TODO : icc profile
   - TODO :more deltaE formula
