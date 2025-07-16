@@ -112,28 +112,26 @@ class Screenshoot(QWidget):
     #     # if pos!=self.cur:
     #     self.cur=pos
     #     self.cursor_moved.emit(pos)
-    def pullCursor(self):
-        import win32api,win32con
+    def expand_range(self):
         step=2
-        if (Qt.Key_Control in GLOBAL_PRESS and  Qt.Key_1 in GLOBAL_PRESS) :
-            self.ctrled=0
-            width=self.width()
-            self.setFixedSize(width+step,width+step)
-            self.show()
-            # print("222", self.width(), self.height(), self.label.width(), self.label.height())
-        elif (Qt.Key_Control in GLOBAL_PRESS and  Qt.Key_0 in GLOBAL_PRESS)  :
-            self.ctrled=0
-            self.setFixedSize(self.default_width,self.default_height)
-            # self.hot_key_event("")
-            self.show()
-        elif (Qt.Key_Control in GLOBAL_PRESS and  Qt.Key_2 in GLOBAL_PRESS) :
-            self.ctrled=0
-            width = self.width()
-            if width-step>=5:
-                self.setFixedSize(width - step, width - step)
-            # print("222", self.width(), self.height(), self.label.width(), self.label.height())
-            self.show()
-        else:self.hide()
+        width = self.width()
+        self.setFixedSize(width + step, width + step)
+        self.show()
+    def shrink_range(self):
+        step=2
+        width = self.width()
+        if width - step >= 5:
+            self.setFixedSize(width - step, width - step)
+        # print("222", self.width(), self.height(), self.label.width(), self.label.height())
+        self.show()
+    def reset_range(self):
+        self.setFixedSize(self.default_width, self.default_height)
+        # self.hot_key_event("")
+        self.show()
+
+
+    def pullCursor(self):
+        self.hide()
         pos=QCursor.pos()
         # if pos!=self.cur:
         self.cur=pos

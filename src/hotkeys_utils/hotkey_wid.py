@@ -6,7 +6,7 @@
 # @File: hotkey_wid.py
 # @Software: PyCharm
 from PyQt5.QtWidgets import QMainWindow
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from pyqthotkey import HotkeyPicker
 import sys
 from PyQt5.QtWidgets import QApplication
@@ -15,11 +15,11 @@ from PyQt5.QtWidgets import QMainWindow, QFormLayout, QWidget
 from .hotkey_picker import HotkeyPicker
 
 
-class HotKeyWindow(QMainWindow):
-
+class HotKeyWindow(QWidget):
+    widget_closed = pyqtSignal()
     def __init__(self):
         super().__init__(parent=None)
-
+        self.setWindowFlags(Qt.WindowStaysOnTopHint )
         # Window settings
         self.setWindowTitle('Hotkey Setting')
         self.resize(360, 150)
@@ -30,13 +30,16 @@ class HotKeyWindow(QMainWindow):
         self.form_layout.setSpacing(5)
         self.form_layout.setContentsMargins(25, 25, 25, 25)
         # Set layout
-        central_widget = QWidget()
-        central_widget.setLayout(self.form_layout)
-        self.setCentralWidget(central_widget)
-        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
-        self.register("pixel pick",[Qt.Key_Control,Qt.Key_QuoteLeft])
 
-        self.register("screen pick", [Qt.Key_Alt, Qt.Key_QuoteLeft])
+        self.setLayout(self.form_layout)
+        self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+        # self.register("pixel pick",[Qt.Key_Control,Qt.Key_QuoteLeft])
+        # self.register("screen pick", [Qt.Key_Alt, Qt.Key_QuoteLeft])
+    def closeEvent(self,event):
+        super(HotKeyWindow, self).closeEvent(event)
+        print("CLOSE")
+        # super().close()
+        self.widget_closed.emit()
 
     def register(self,keyname,defaultkeys):
         if keyname in self.keynames:
@@ -47,9 +50,17 @@ class HotKeyWindow(QMainWindow):
             # Set size constraints
             self.key_line.setFixedHeight(25)
 
+
             self.key_line.hotkeyChanged.connect(self.hotkey_picker_1_changed)
             self.form_layout.addRow(keyname, self.key_line)
             self.keynames[keyname]=self.key_line
+
+    def get_hot_keys(self):
+        hot_keys={}
+        for keyname,wid in self.keynames.items():
+            hot_keys[keyname]=wid.getHotkey()
+        return True,hot_keys
+
 
     def hotkey_picker_1_changed(self, key, key_name):
         # Handle change of hotkey 1
