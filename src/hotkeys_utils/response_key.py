@@ -151,7 +151,7 @@ pyn2Qt_map={
 }
 
 
-print(pyn2Qt_map)
+# print(pyn2Qt_map)
 def on_press(key):
     try:
         if hasattr(key,"value"):
@@ -162,7 +162,7 @@ def on_press(key):
             vk=pyn2Qt_map[vk]
         if vk not in  GLOBAL_PRESS:
             GLOBAL_PRESS.append(vk)
-            print(f'Alphanumeric key pressed: {key}',GLOBAL_PRESS)
+            # print(f'Alphanumeric key pressed: {key}',GLOBAL_PRESS)
     except AttributeError:
         print(f'Special key pressed: {key}')
 

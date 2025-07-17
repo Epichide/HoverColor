@@ -21,9 +21,9 @@ class RecordForm(QTableWidget):
         self.connected_wid=None
         self.defaultHeight=175
         self.setMinimumSize(1,1)
-        self.setGeometry(QtCore.QRect(0, 0, 160, self.defaultHeight))
+        self.setGeometry(QtCore.QRect(0, 0, 140, self.defaultHeight))
         # self.setFixedSize(160,self.defaultHeight)
-        self.setFixedWidth(160)
+        self.setFixedWidth(140)
         self.setColumnCount(self.ncol)
         self.setRowCount(self.nrow)
         self.horizontalHeader().setVisible(True)
@@ -39,7 +39,7 @@ class RecordForm(QTableWidget):
         # self.verticalHeader().setDefaultSectionSize(self.defaultHeight / (self.nrow + 1))
         # heads = self.horizontalHeader()
         # heads.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
-        self.setColumnWidth(0,100)
+        self.setColumnWidth(0,80)
         self.setColumnWidth(1,60)
         self.init_ui()
         self.setStyleSheet(

@@ -19,7 +19,8 @@ example
 - 20250717:
   - fix bug: RGB value display error: G=Gray : fixed
   - add new gamut ( only work on Lab colorspace): P3-D65(displayP3), sRGB, P3-DCI
-  
+  - remember last used profile, auto load last profile
+  - **TODO : Reset profile**
 - 20250717:
   - global hotkey setting
   - fix delta2020 -> 2000
