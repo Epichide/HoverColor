@@ -17,9 +17,13 @@ example
 
 ## update log
 - 20250717:
+  - fix bug: RGB value display error: G=Gray : fixed
+  - add new gamut ( only work on Lab colorspace): P3-D65(displayP3), sRGB, P3-DCI
+  
+- 20250717:
   - global hotkey setting
   - fix delta2020 -> 2000
-  - TODO : add some restricts for key binding
+  - **TODO : add some restricts for key binding**
 - 20250715:
   - support : AutoAdjust Scaling when screen resolution changes
   - fix bug : multi screen crash : move from one screen to another
@@ -28,8 +32,8 @@ example
   - adjust colorwidget angle : red is on top-right
   - add [deltaE(2000)](https://github.com/lovro-i/CIEDE2000/blob/master/ciede2000.py)
   - add RGB+G record
-  - TODO : icc profile
-  - TODO :more deltaE formula
+  - **TODO : icc profile**
+  - **TODO :more deltaE formula**
 - 20250710:
     - add custom [screenashot](https://github.com/SeptemberHX/screenshot) color picker (average) : shift + `
     - add custom hover color picker size(average) : 
