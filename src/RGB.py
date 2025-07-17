@@ -84,8 +84,8 @@ class RGBBar(BaseWidget):
         self.red.cur.move(QPoint(0,self.bar_height-r/255.0*self.bar_height-self.cursor_height/2.0))
         self.blue.cur.move(QPoint(0,self.bar_height-b/255.0*self.bar_height-self.cursor_height/2.0))
         self.green.cur.move(QPoint(0,self.bar_height-g/255.0*self.bar_height-self.cursor_height/2.0))
-        g=  0.299 *r+ 0.587 *g + 0.114 *b
-        self.pos_value_signal.emit([r,g,b,round(g)])
+        gray=  0.299 *r+ 0.587 *g + 0.114 *b
+        self.pos_value_signal.emit([r,g,b,round(gray)])
 
     def freeze_cursor(self):
         self.red.pos_old2.move(self.red.pos_old1.pos())

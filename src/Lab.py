@@ -8,6 +8,13 @@
 import math
 import  sys,os
 
+import matplotlib.pyplot as plt
+
+try:
+    from .color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
+except:
+    from color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
+
 import colour
 import numpy as np
 from PyQt5 import QtCore, QtGui
@@ -21,16 +28,17 @@ except:
     from  hue import  HueChart
 class LabChart(HueChart):
 
-    def __init__(self,parent=None,mode="hsv"):
+    def __init__(self,parent=None,mode="hsv",gamut="P3-D65"):
         super().__init__(parent)
         self.Lab_1 = None
         self.Lab_2 = None
         self.colorspace = "Lab"
         self.metric = "ΔE2000"
+        self.gamut= gamut
         self.load_lab_img()
     def load_lab_img(self):
         nsize=500
-        filename="src/80_lab_proj_0-100.png"
+        filename=f"src/80_lab_proj_0-100_{self.gamut}.png"
         import os
         print(os.path.abspath(filename))
         qpix=QPixmap(filename).scaled(self.hue.width()-1,self.hue.height()-1)
@@ -40,6 +48,9 @@ class LabChart(HueChart):
         painter.drawLine(0, self.hue.height() / 2,  self.hue.width() , self.hue.height()/2)
         painter.end()
         self.hue.setPixmap(qpix)
+    def set_gamut(self,gamut="P3-D65"):
+        self.gamut=gamut
+        self.load_lab_img()
     def freeze_cursor(self):
         super().freeze_cursor()
         self.Lab_1=self.Lab_2
@@ -132,8 +143,7 @@ class LabChart(HueChart):
         dE_00 = math.sqrt(f_L ** 2 + f_C ** 2 + f_H ** 2 + R_T * f_C * f_H)
         return dE_00
     def pick_color(self,r,g,b):
-        from skimage import  color
-        lab=color.rgb2lab(np.array([r,g,b])/255.0)
+        lab=color_RGB_to_Lab(np.array([r,g,b])/255.0,gamut=self.gamut)
         v,la,lb=lab
         self.bar_length = self.luma.height()
         self.pie_radius=self.hue.height()/2
@@ -144,8 +154,8 @@ class LabChart(HueChart):
             QPoint(self.hue_cur.height()/2,self.hue_cur.height()/2)
 
         )
-        dx=-la/127*self.pie_radius
-        dy=lb/127*self.pie_radius
+        dx=-la/125*self.pie_radius
+        dy=lb/125*self.pie_radius
         self.hue_cur.move(self.pie_center-QPoint(dx,dy))
 
         color_string = ",".join([str(r), str(g), str(b)])
@@ -190,6 +200,53 @@ def create_lab_proj(nsize=500,initial=50):
         img[new_mask]=img_plane[new_mask]
     from  skimage import  io
     io.imsave(str(mid)+"_lab_proj_0-100.png",img)
+def create_lab_img_cus(l=50,nsize=500,gamut="P3-D65"):
+    x=np.linspace(-1,1,nsize)
+    y=np.linspace(-1,1,nsize)
+    B,A=np.mgrid[1:-1:nsize*-1j,-1:1:nsize*1j]
+    S=np.sqrt(A*A+B*B)
+    AP=np.ones([nsize,nsize,1],dtype=np.uint8)*255
+    arr=np.ones([nsize,nsize,3])
+    arr[:,:,0]=l
+    arr[:,:,1]=A*125
+    arr[:,:,2]=B*125
+    from  skimage import color
+    rgb=color_Lab_to_RGB(arr,gamut=gamut)
+    A5=np.isnan(rgb)
+    # rgb=rgb.clip(0,1)
+    lab=color_RGB_to_Lab(rgb,gamut=gamut)
+    A2=np.max(np.abs(arr-lab),axis=2)>0.001
+    A3=np.max(np.abs(rgb),axis=2)>1
+    A4=np.max(np.abs(rgb),axis=2)<0
+    A2=A2|A3|A4|A5[:,:,0]|A5[:,:,1]|A5[:,:,2]
+    # A2=A2+(rgb>1)[:,:,0]+(rgb<0)[:,:,0]
+    AP[:,:,0][A2]=0
+    rgb=rgb*255
+    rgb.clip(0,255)
+    img=np.array(rgb,dtype=np.uint8)
+    img=np.concatenate([img,AP],axis=2)
+    area=np.sum(A2)
+    # plt.imshow(img)
+    # plt.show()
+    # from skimage import io
+    # io.imsave(str(l) + "_lab_proj_0-100.png", img)
+    return img
+def create_lab_proj_cus(nsize=500,initial=50,gamut="P3-D65"):
+    img=np.zeros([nsize,nsize,4],dtype=np.uint8)
+    mid=initial
+    for v in range(mid,0,-1):
+        img_plane=create_lab_img_cus(l=v,nsize=nsize,gamut=gamut)
+        new_mask=img_plane[:,:,-1]>img[:,:,-1]
+        img[new_mask]=img_plane[new_mask]
+    for v in range(mid,100,1):
+        img_plane=create_lab_img_cus(l=v,nsize=nsize,gamut=gamut)
+        new_mask=img_plane[:,:,-1]>img[:,:,-1]
+        img[new_mask]=img_plane[new_mask]
+    from  skimage import  io
+    io.imsave(str(mid)+f"_lab_proj_0-100_{gamut}.png",img)
 
 if __name__ == '__main__':
-    create_lab_proj(500,80)
+    # create_lab_proj_cus(500,80,gamut="P3-D65")
+    # create_lab_proj_cus(500,80,gamut="sRGB")
+    create_lab_proj_cus(500,80,gamut="P3-DCI")
+    # create_lab_proj_cus(500,80,gamut="")

@@ -68,9 +68,11 @@ class App(QWidget):
         self.action_keys={}
         self.widget_keys={}
         self.record_keys={}
+        self.gamut_keys={}
         self.menu=QMenu(self)
         self.submenu=QMenu("Record",self.menu)
         self.submenu_palette=QMenu("ColorSpace",self.menu)
+        self.submenu_gamut=QMenu("Gamut",self.menu)
         self.register_action(self.rgb_bar,self.submenu_palette,"RGB")
         self.register_action(self.hsv_bar,self.submenu_palette, "HSV")
         self.register_action(self.jch_bar,self.submenu_palette, "JCh")
@@ -79,8 +81,12 @@ class App(QWidget):
         self.register_record_action(self.submenu,self.jch_bar,"Jch")
         self.register_record_action(self.submenu,self.rgb_bar,"RGB")
         self.register_record_action(self.submenu,self.lab_bar,"Lab")
+        gamuts=["P3-D65","sRGB","P3-DCI"]
+        for gamut in gamuts:
+            self.register_gamut_action(self.submenu_gamut,gamut)
         self.menu.addMenu(self.submenu)
         self.menu.addMenu(self.submenu_palette)
+        self.menu.addMenu(self.submenu_gamut)
 
         self.action_hotkey = QAction("快捷键设置", self)
         self.menu.addAction(self.action_hotkey)
@@ -91,7 +97,20 @@ class App(QWidget):
         self.menu.addAction(self.action_quit)
         self.action_quit.triggered.connect(self.close)
         self.action_quit.triggered.connect(self.shot1.close)
-
+    def register_gamut_action(self,submenu,gamut="P3-D65"):
+        act = QAction(gamut, self)
+        act.setCheckable(True)
+        submenu.addAction(act)
+        self.gamut_keys[gamut] = act
+        act.triggered.connect(lambda: self.set_gamut(gamut))
+    def set_gamut(self,gamut="P3-D65"):
+        for tgamut, act in self.gamut_keys.items():
+            act.setChecked(False)
+        act = self.gamut_keys[gamut]
+        act.setChecked(True)
+        for wid in self.widget_keys.values():
+            if hasattr(wid,"set_gamut"):
+                wid.set_gamut(gamut)
     def register_record_action(self,submenu,wid,tex="RGB"):
         act=QAction(tex,self)
         act.setCheckable(True)
@@ -163,6 +182,7 @@ class App(QWidget):
         self.timer.start()
         self.press_pos=self.pos()
         self.connect_record("HSV")
+        self.set_gamut(gamut="P3-D65")
         # register hotkey
         self.register_hotkey([Qt.Key_Shift,Qt.Key_QuoteLeft],
                              self.getCustomColor,"Screen Pick")
