@@ -6,7 +6,7 @@
 # @File: hotkey_picker.py
 # @Software: PyCharm
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtWidgets import QMessageBox, QPushButton
 
 
 class HotkeyPicker(QPushButton):
@@ -32,7 +32,7 @@ class HotkeyPicker(QPushButton):
                  cancel_key: Qt.Key = Qt.Key.Key_Escape,
                  key_filter_enabled: bool = False,
                  whitelisted_keys: list[Qt.Key] = [],
-                 blacklisted_keys: list[Qt.Key] = [Qt.Key_Enter,Qt.Key_Return],
+                 blacklisted_keys: list[Qt.Key] = [Qt.Key_Enter,Qt.Key_Return,Qt.Key_Shift],
                  max_key_num=1):
         """Create a new HotkeyPicker instance
 
@@ -100,14 +100,15 @@ class HotkeyPicker(QPushButton):
 
         :param event: event sent by PyQt
         """
-
         # Focus out without a new key being selected
         if self.__selected_key is None and self.__in_selection:
             self.set_key_text()
             self.__in_selection = False
+            self.update()
         elif self.__selected_key is not None and self.__in_selection:
             self.set_key_text()
             self.__in_selection = False
+            self.update()
 
     def CheckNotInBlack(self,hotkeys):
         return not any(hotkey in self.__blacklisted_keys for hotkey in hotkeys)
@@ -127,6 +128,36 @@ class HotkeyPicker(QPushButton):
         # if event.isAutoRepeat():
         #     print("isAutoRepeat",True,key)
         # Check if entered key is cancel key
+
+
+        if event.key() == Qt.Key_Shift :
+
+            msg_box = QMessageBox(self)
+            msg_box.setStyleSheet("""
+            QPushButton {
+                background-color: #ffffff;
+                border: 0px solid #000000;
+                color: #000000;
+                
+            }
+            QPushButton:focus {
+                background-color: #ffffff;
+                border: 0px solid #000000;
+            }
+        """)
+            msg_box.setIcon(QMessageBox.Information)
+            msg_box.setWindowTitle("Information")
+            msg_box.setText("Key <b> Shift </b>  is not supported")
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()
+
+
+
+            self.setText(self.__default_text)
+            self.__selected_key = []
+            self._release = False
+            self.clearFocus()
+            self.set_key_text()
         if key == self.__cancel_key:
             self.setText(self.__default_text)
             self.__selected_key = []
