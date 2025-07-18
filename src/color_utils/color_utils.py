@@ -78,7 +78,7 @@ RGB_xy={
         [0.330,0.600,0.060],
 
     ],
-    "Rec709":[
+    "Rec.709":[
         [0.640, 0.300, 0.150],
         [0.330, 0.600, 0.060],
     ],
@@ -98,7 +98,7 @@ RGB_xy={
         [0.630,0.310,0.155],
         [0.340,0.595,0.070],
     ],
-    "Rec2020":[
+    "Rec.2020":[
         [0.708,0.170,0.131],
         [0.292,0.797,0.046],
     ]
@@ -107,11 +107,11 @@ RGB_xy={
 Gmaut_Illuminant={
     # P3:https://en.wikipedia.org/wiki/DCI-P3
     "sRGB":"D65",
-    "Rec709":"D65",
+    "Rec.709":"D65",
     "P3-D65":"D65",#P3-D65 (Display)
     "P3-DCI":"D63",#P3-DCI (Theater)
     "SMPTE-C":"D65",
-    "Rec2020":"D65",
+    "Rec.2020":"D65",
     "P3-D60":"D60",#P3-D60 (ACES Cinema)
 }
 
@@ -121,13 +121,33 @@ Gmaut_Illuminant={
 # Adobe RGB (1998)
 # Adobe Wide Gamut RGB
 # Display P3
-# ITU-R BT.2020
+# Rec.2020
 # ITU-R BT.709
 # P3-D65
 # DCI-P3
 # DCI-P3+
 
+def color_xyY_to_XYZ(xyY):
+    '''将xyY转换为XYZ.'''
+    xyY = np.asarray(xyY)
+    x, y, Y = (xyY[..., i] for i in range(3))
+    y=y.clip(1e-3, 1)  # 防止除以0
+    Y_y = Y / y
+    X = x * Y_y
+    Z = (1 - x - y) * Y_y
+    XYZ = np.stack((X, Y, Z), axis=-1)
+    return XYZ
+def color_XYZ_to_xyY(XYZ):
+    '''将XYZ转换为xyY.'''
+    XYZ = np.asarray(XYZ)
+    S=np.sum(XYZ, axis=-1,).clip(1e-10, None)  # 防止除以0
+    x= XYZ[..., 0] / S
+    y= XYZ[..., 1] / S
+    Y= XYZ[..., 1]
+    xyY=np.stack((x, y, Y), axis=-1)
+    return xyY
 def white_xy2XYZ(xy):
+    # Y default is 1.0
     z=1-xy[0]-xy[1]
     XYZ=[xy[0]/xy[1],1.0,z/xy[1]]
     return XYZ
@@ -209,8 +229,17 @@ def color_RGB_to_linearRGB(RGB,gamut="sRGB"):
         linearRGB = np.where(RGB < 0.0556, RGB / 32, RGB**2.2)
     elif gamut in ["P3-DCI"]:
         linearRGB = RGB**2.6
+    elif gamut in ["Rec.709", "Rec.2020"]:
+        alpha = 1.09929682680944
+        beta = 0.018053968510807
+        beta_dash = beta * 4.5  # 0.0812428583
+        linearRGB = np.where(
+            RGB < beta_dash,
+            RGB / 4.5,
+            ((RGB + (alpha - 1)) / alpha) ** (1 / 0.45)
+        )
     else:
-        linearRGB=RGB
+        linearRGB = RGB
     return linearRGB
 
 def plot_gamma_curve():
@@ -227,6 +256,14 @@ def color_linearRGB_to_RGB(linearRGB,gamut="sRGB"):
         RGB=np.where(linearRGB<0.00174,linearRGB*32,linearRGB**(1/2.2))
     elif gamut in ["P3-DCI"]:
         RGB = linearRGB**(1/2.6)
+    elif gamut in ["Rec.709", "Rec.2020"]:
+        alpha = 1.09929682680944
+        beta = 0.018053968510807
+        RGB = np.where(
+            linearRGB < beta,
+            linearRGB * 4.5,
+            alpha * (linearRGB ** 0.45) - (alpha - 1)
+        )
     else:
         RGB=linearRGB
     return RGB
@@ -557,15 +594,17 @@ def color_space_transform(input_color, fromSpace2toSpace):
 
 if __name__ == '__main__':
     # get_XYZD65_to_AC1C2_M()
+    print(np.round(np.matrix(get_RGB2XYZ_M(gamut="sRGB")).I,3))
     # print(np.round(get_RGB2XYZ_M(gamut="P3-D65"),8))
     # print(np.round(get_RGB2XYZ_M(gamut="sRGB"),8))
     # lab= color_RGB_to_Lab([55,95,180],gamut="P3-D65")
     # print(color_Lab_to_RGB(lab, gamut="P3-D65")*255)
     # print(color_Lab_to_RGB(lab, gamut="sRGB")*255)
-    lab = color_RGB_to_Lab(np.array([100, 20, 80])/255,gamut="P3-DCI") #24.12231082  46.83461498 -16.35073021
-    lab=np.array([50, -300, -300])
-    rgb =color_Lab_to_RGB(lab,gamut= "P3-DCI")
-    lab2 = color_RGB_to_Lab(rgb,gamut="P3-DCI")
 
-    print(lab,lab2)
-    print(rgb*255)
+    # lab = color_RGB_to_Lab(np.array([100, 20, 80])/255,gamut="P3-DCI") #24.12231082  46.83461498 -16.35073021
+    # lab=np.array([50, -300, -300])
+    # rgb =color_Lab_to_RGB(lab,gamut= "P3-DCI")
+    # lab2 = color_RGB_to_Lab(rgb,gamut="P3-DCI")
+    #
+    # print(lab,lab2)
+    # print(rgb*255)

@@ -38,8 +38,9 @@ class LabChart(HueChart):
         self.load_lab_img()
     def load_lab_img(self):
         nsize=500
-        filename=f"src/80_lab_proj_0-100_{self.gamut}.png"
         import os
+        filename = os.path.join("src","resource", "Lab",  f"80_lab_proj_0-100_{self.gamut}.png")
+
         print(os.path.abspath(filename))
         qpix=QPixmap(filename).scaled(self.hue.width()-1,self.hue.height()-1)
         painter=QPainter(qpix)
@@ -154,8 +155,8 @@ class LabChart(HueChart):
             QPoint(self.hue_cur.height()/2,self.hue_cur.height()/2)
 
         )
-        dx=-la/125*self.pie_radius
-        dy=lb/125*self.pie_radius
+        dx=-la/180*self.pie_radius
+        dy=lb/180*self.pie_radius
         self.hue_cur.move(self.pie_center-QPoint(dx,dy))
 
         color_string = ",".join([str(r), str(g), str(b)])
@@ -208,8 +209,8 @@ def create_lab_img_cus(l=50,nsize=500,gamut="P3-D65"):
     AP=np.ones([nsize,nsize,1],dtype=np.uint8)*255
     arr=np.ones([nsize,nsize,3])
     arr[:,:,0]=l
-    arr[:,:,1]=A*125
-    arr[:,:,2]=B*125
+    arr[:,:,1]=A*180
+    arr[:,:,2]=B*180
     from  skimage import color
     rgb=color_Lab_to_RGB(arr,gamut=gamut)
     A5=np.isnan(rgb)
@@ -217,7 +218,7 @@ def create_lab_img_cus(l=50,nsize=500,gamut="P3-D65"):
     lab=color_RGB_to_Lab(rgb,gamut=gamut)
     A2=np.max(np.abs(arr-lab),axis=2)>0.001
     A3=np.max(np.abs(rgb),axis=2)>1
-    A4=np.max(np.abs(rgb),axis=2)<0
+    A4=np.min((rgb),axis=2)<0
     A2=A2|A3|A4|A5[:,:,0]|A5[:,:,1]|A5[:,:,2]
     # A2=A2+(rgb>1)[:,:,0]+(rgb<0)[:,:,0]
     AP[:,:,0][A2]=0
@@ -243,10 +244,13 @@ def create_lab_proj_cus(nsize=500,initial=50,gamut="P3-D65"):
         new_mask=img_plane[:,:,-1]>img[:,:,-1]
         img[new_mask]=img_plane[new_mask]
     from  skimage import  io
-    io.imsave(str(mid)+f"_lab_proj_0-100_{gamut}.png",img)
+    outfile=os.path.join("resource","Lab",str(mid)+f"_lab_proj_0-100_{gamut}.png")
+    io.imsave(outfile,img)
 
 if __name__ == '__main__':
-    # create_lab_proj_cus(500,80,gamut="P3-D65")
-    # create_lab_proj_cus(500,80,gamut="sRGB")
+    create_lab_proj_cus(500,80,gamut="P3-D65")
+    create_lab_proj_cus(500,80,gamut="sRGB")
     create_lab_proj_cus(500,80,gamut="P3-DCI")
+    create_lab_proj_cus(500,80,gamut="Rec.709")
+    create_lab_proj_cus(500,80,gamut="Rec.2020")
     # create_lab_proj_cus(500,80,gamut="")

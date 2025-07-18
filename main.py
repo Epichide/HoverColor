@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout, QApplication, QMenu, Q
 from src.RGB import RGBBar
 from src.Lab import LabChart
 from src.Jch import JchChart
+from src.XYZ import XYZChart
 from src.hue import HueChart
 from src.record import RecordForm
 from src.screenshoot import Screenshoot
@@ -57,12 +58,14 @@ class App(QWidget):
         self.lab_bar=LabChart(self)
         self.jch_bar=JchChart(self)
         self.hsv_bar=HueChart(self,"hsv")
+        self.XYZ_bar=XYZChart(self,"XYZ")
         # self.lab_bar=HueChart(self,"lab")
         self.record=RecordForm(self)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.contextMenuPolicy()
         self.Hlayout=QHBoxLayout(self)
-        self.bar_widgets=[self.rgb_bar,self.hsv_bar,self.lab_bar,self.jch_bar,self.record]
+        self.bar_widgets=[self.rgb_bar,self.hsv_bar,
+                          self.lab_bar,self.jch_bar,self.XYZ_bar,self.record]
         self.init_menu()
         for wid in self.bar_widgets:
             self.Hlayout.addWidget(wid)
@@ -81,11 +84,13 @@ class App(QWidget):
         self.register_action(self.hsv_bar,self.submenu_palette, "HSV")
         self.register_action(self.jch_bar,self.submenu_palette, "JCh")
         self.register_action(self.lab_bar,self.submenu_palette, "Lab")
+        self.register_action(self.XYZ_bar,self.submenu_palette, "XYZ")
         self.register_record_action(self.submenu,self.hsv_bar,"HSV")
         self.register_record_action(self.submenu,self.jch_bar,"Jch")
         self.register_record_action(self.submenu,self.rgb_bar,"RGB")
         self.register_record_action(self.submenu,self.lab_bar,"Lab")
-        gamuts=["P3-D65","sRGB","P3-DCI"]
+        self.register_record_action(self.submenu,self.XYZ_bar,"XYZ")
+        gamuts=["P3-D65","sRGB","P3-DCI","Rec.709","Rec.2020"]
         for gamut in gamuts:
             self.register_gamut_action(self.submenu_gamut,gamut)
         self.menu.addMenu(self.submenu)

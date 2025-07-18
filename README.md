@@ -16,6 +16,10 @@ example
     reset : ctrl + 0
 
 ## update log
+- 20250719:
+  - add BT2020 BT09 gamut
+  - TODO : JCH support different gamut
+  - 
 - 20250717:
   - fix bug: RGB value display error: G=Gray : fixed
   - add new gamut ( only work on Lab colorspace): P3-D65(displayP3), sRGB, P3-DCI

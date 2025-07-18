@@ -29,7 +29,7 @@ class JchChart(HueChart):
         self.load_jch_img()
     def load_jch_img(self):
         nsize=500
-        filename="src/30_jch_proj_30-100.png"
+        filename="src/resource/JCH/30_jch_proj_30-100.png"
         import os
         print(os.path.abspath(filename))
         qpix=QPixmap(filename).scaled(self.hue.width()-1,self.hue.height()-1)

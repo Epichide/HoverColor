@@ -20,10 +20,11 @@ class RecordForm(QTableWidget):
         self.func=None
         self.connected_wid=None
         self.defaultHeight=175
+        self.defaultWidth=160
         self.setMinimumSize(1,1)
-        self.setGeometry(QtCore.QRect(0, 0, 140, self.defaultHeight))
-        # self.setFixedSize(160,self.defaultHeight)
-        self.setFixedWidth(140)
+        self.setGeometry(QtCore.QRect(0, 0, self.defaultWidth, self.defaultHeight))
+        self.setFixedSize(self.defaultWidth, self.defaultHeight)
+        self.setFixedWidth(self.defaultWidth)
         self.setColumnCount(self.ncol)
         self.setRowCount(self.nrow)
         self.horizontalHeader().setVisible(True)
@@ -39,8 +40,7 @@ class RecordForm(QTableWidget):
         # self.verticalHeader().setDefaultSectionSize(self.defaultHeight / (self.nrow + 1))
         # heads = self.horizontalHeader()
         # heads.setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
-        self.setColumnWidth(0,80)
-        self.setColumnWidth(1,60)
+        self.adjust_column_width(100/160)
         self.init_ui()
         self.setStyleSheet(
             "QTableView::item::selected"
@@ -54,7 +54,10 @@ class RecordForm(QTableWidget):
             "border: none"
             "}"
         )
+    def adjust_column_width(self,firstratio=100/160):
 
+        self.setColumnWidth(0,int(firstratio*self.defaultWidth))
+        self.setColumnWidth(1,(1-firstratio)*self.defaultWidth)
     def dis_connect_wid(self):
         if self.connected_wid:
             self.connected_wid.pos_value_signal.disconnect(self.func)
@@ -76,6 +79,11 @@ class RecordForm(QTableWidget):
         self.connected_wid=wid
         self.setHorizontalHeaderLabels([colorspace,metric])
         print("Record Connect : ",head)
+        if self.connected_wid.colorspace == "XYZ":
+            self.adjust_column_width(150 / 160)
+        else:
+            self.adjust_column_width(100 / 160)
+
     def update_value(self,values):
         if len(values)==3:
             x,y,z=values
@@ -86,7 +94,11 @@ class RecordForm(QTableWidget):
         item=self.item(0,1)
         deltaE=round(deltae,3)
         item.setText(str(deltaE))
-        x,y,z=round(x),round(y),round(z)
+        if self.connected_wid.colorspace=="XYZ":
+            x,y,z=round(x,3),round(y,3),round(z,3)
+
+        else:
+            x,y,z=round(x),round(y),round(z)
         item=self.item(0,0)
         item.setText(",".join([str(x),str(y),str(z)]))
         self.horizontalHeader().setFixedHeight(self.defaultHeight / (self.nrow + 1))

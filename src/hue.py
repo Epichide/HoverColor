@@ -32,6 +32,7 @@ class HueChart(BaseWidget):
         font=QtGui.QFont()
         font.setPointSize(8)
         self.hue.setFont(font)
+
         self.hue.setStyleSheet(
             "border-style: outset;\n"
             "border-width: 1px;\n"
@@ -109,7 +110,7 @@ class HueChart(BaseWidget):
         v = min(255, v * 255)
         s = min(255, s * 255)
         color_string = ",".join([str(r), str(g), str(b)])
-        self.hue_cur.setStyleSheet("Qlabel{background-color: rgb(" + color_string + ");}")
+        # self.hue_cur.setStyleSheet("background-color: rgb(" + color_string + ");")
         self.pos_value_signal.emit([h,s,v])
         return h,s,v
     def add_pos_hue_widget(self,wid,tex=""):
@@ -118,18 +119,23 @@ class HueChart(BaseWidget):
         pos_wid.setGeometry(QtCore.QRect(70,70,12,12))
         pos_wid.setStyleSheet(
             # "background-color: qlinear()"
-            "border-radius: 4px;"
+            "border-width: 1px;\n"
+            "border-radius: 1px;"
         )
         return pos_wid
     def add_cur_hue_widget(self,wid):
         pos_wid=QLabel(wid)
         pos_wid.setGeometry(QtCore.QRect(70,40,10,10))
-        pos_wid.setFrameShape(QFrame.NoFrame)
+        # pos_wid.setFrameShape(QFrame.NoFrame)
         pos_wid.setText("")
-        # pos_wid.setStyleSheet(
-        #     # "background-color: qlinear()"
-        #     "border-radius: 4px;"
-        # )
+        pos_wid.setStyleSheet(
+            # "background-color: qlinear()"
+            # "border-style: outset;\n"
+            "border: 1px solid #000000;"
+            # "border-width: 1px;\n"
+            "border-radius: 1px;"
+        )
+
         return pos_wid
 
     def add_pos_luma_widget(self, wid, tex=""):
