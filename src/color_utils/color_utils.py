@@ -7,15 +7,6 @@
 # @Software: PyCharm
 
 
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# Copyright (c) Huawei Technologies Co., Ltd. 2012-2020. All rights reserved.
-
-# @Time         : 2024/5/13 9:18
-# @Name         : color_utils.py
-# @LastEditors  :
-# @Team         : Kirin PQ Group
-# @Author       : z30054870
 import colour
 from colour.colorimetry import CCS_ILLUMINANTS
 from colour.models import xy_to_XYZ, xy_to_xyY, xyY_to_XYZ

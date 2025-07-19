@@ -120,7 +120,7 @@ class HueChart(BaseWidget):
         pos_wid.setStyleSheet(
             # "background-color: qlinear()"
             "border-width: 1px;\n"
-            "border-radius: 1px;"
+            "border-radius: 4px;"
         )
         return pos_wid
     def add_cur_hue_widget(self,wid):

@@ -6,7 +6,7 @@
 # @File: XYZ.py
 # @Software: PyCharm
 #ref1:https://www.jianshu.com/p/854ca5f13ce6
-#ref2:https://www.jianshu.com/p/854ca5f13ce6
+#ref2:https://zhajiman.github.io/post/chromaticity_diagram/#%E6%9C%80%E7%BB%88%E6%95%88%E6%9E%9C
 import os
 
 import numpy as np
@@ -77,7 +77,7 @@ class XYZChart(HueChart):
         self.bar_length = self.luma.height()
         self.pie_radius=self.hue.height()/2
 
-        self.luma_cur.move(QPoint(0,self.bar_length*(1-Y/100)-self.luma_cur.height()/2))
+        self.luma_cur.move(QPoint(0,self.bar_length*(1-Y/1)-self.luma_cur.height()/2))
 
         self.left_bottom=QPoint(0,self.hue.height())
         dx=x/0.75*self.pie_radius*2
