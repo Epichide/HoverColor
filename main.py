@@ -3,7 +3,8 @@ import  sys,os
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QEventLoop, Qt, pyqtSlot, QPoint, pyqtSignal, QTimer, QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon, QMouseEvent, QCursor, QPixmap
-from PyQt5.QtWidgets import QLabel, QWidget, QHBoxLayout, QApplication, QMenu, QAction, QMessageBox
+from PyQt5.QtWidgets import QCheckBox, QLabel, QWidget, QHBoxLayout, QApplication, QMenu, QAction, QMessageBox, \
+    QWidgetAction
 #from src.color_platte import get_average_clor
 from src.RGB import RGBBar
 from src.Lab import LabChart
@@ -42,6 +43,7 @@ class App(QWidget):
         self.shot1.show()
     def rightmenu(self):
         self.menu.popup(QCursor.pos())
+
     def right_menu(self):
         num=0
         for act in self.action_keys.values():
@@ -175,20 +177,25 @@ class App(QWidget):
 
     #####--------- COLORSPACE----------------
     def create_checkale_action(self,name,submenu=None,icon=None):
-        act=QAction(name,self)
-        act.setCheckable(True)
+        act=QWidgetAction(self)
+        act.setText(name)
+        # act.setCheckable(True)
+        submenu_palette_checkbox=QCheckBox(self.submenu_palette)
+        submenu_palette_checkbox.setText(name)
+        act.setDefaultWidget(submenu_palette_checkbox)
         if submenu is None:
             self.menu.addAction(act)
         else:
             submenu.addAction(act)
-        return act
+        return submenu_palette_checkbox
     def register_action(self,widget,submenu=None,key=""):
 
         action_i=self.create_checkale_action(key,submenu=submenu)
         action_i.setChecked(True)
         self.action_keys[key]=action_i
         self.widget_keys[action_i]=widget
-        action_i.triggered.connect(lambda :self.change_picker_widget(key))
+        action_i.clicked.connect(lambda status :self.change_picker_widget(key))
+        # action_i.triggered.connect(lambda :self.change_picker_widget(key))
 
 
     def check_dispay_widget_num(self):
@@ -196,11 +203,11 @@ class App(QWidget):
         num=sum(nums)
         return num
     def change_picker_widget(self,key):
-        print(self.check_dispay_widget_num())
+        print("showed colorspace widget num",self.check_dispay_widget_num())
         if  self.check_dispay_widget_num():
             act=self.action_keys[key]
             status=act.isChecked()
-            print(status)
+            print(key,"shown",status)
             #act.setChecked(~status)
             if not status:
                 self.widget_keys[act].hide()
