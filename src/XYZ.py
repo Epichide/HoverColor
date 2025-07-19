@@ -156,9 +156,10 @@ def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
     io.imsave(outfile,img)
 
 if __name__ == '__main__':
-    create_xyz_proj_cus(gamut="P3-D65")
-    create_xyz_proj_cus(gamut="P3-DCI")
-    create_xyz_proj_cus(gamut="sRGB")
-    create_xyz_proj_cus(gamut="Rec.2020")
-    create_xyz_proj_cus(gamut="Rec.709")
+    # create_xyz_proj_cus(gamut="P3-D65")
+    # create_xyz_proj_cus(gamut="P3-DCI")
+    # create_xyz_proj_cus(gamut="sRGB")
+    # create_xyz_proj_cus(gamut="Rec.2020")
+    # create_xyz_proj_cus(gamut="Rec.709")
+    create_xyz_proj_cus(gamut="AdobeRGB")
 

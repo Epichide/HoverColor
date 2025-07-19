@@ -248,9 +248,10 @@ def create_lab_proj_cus(nsize=500,initial=50,gamut="P3-D65"):
     io.imsave(outfile,img)
 
 if __name__ == '__main__':
-    create_lab_proj_cus(500,80,gamut="P3-D65")
-    create_lab_proj_cus(500,80,gamut="sRGB")
-    create_lab_proj_cus(500,80,gamut="P3-DCI")
-    create_lab_proj_cus(500,80,gamut="Rec.709")
-    create_lab_proj_cus(500,80,gamut="Rec.2020")
+    # create_lab_proj_cus(500,80,gamut="P3-D65")
+    # create_lab_proj_cus(500,80,gamut="sRGB")
+    # create_lab_proj_cus(500,80,gamut="P3-DCI")
+    # create_lab_proj_cus(500,80,gamut="Rec.709")
+    # create_lab_proj_cus(500,80,gamut="Rec.2020")
+    create_lab_proj_cus(500,80,gamut="AdobeRGB")
     # create_lab_proj_cus(500,80,gamut="")

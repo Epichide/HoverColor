@@ -92,7 +92,7 @@ class App(QWidget):
         self.register_record_action(self.submenu,self.rgb_bar,"RGB")
         self.register_record_action(self.submenu,self.lab_bar,"Lab")
         self.register_record_action(self.submenu,self.XYZ_bar,"XYZ")
-        gamuts=["P3-D65","sRGB","P3-DCI","Rec.709","Rec.2020"]
+        gamuts=["P3-D65","sRGB","P3-DCI","Rec.709","Rec.2020","AdobeRGB"]
         for gamut in gamuts:
             self.register_gamut_action(self.submenu_gamut,gamut)
         self.menu.addMenu(self.submenu)
