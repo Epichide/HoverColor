@@ -6,16 +6,15 @@
 # @File: Jch.py
 # @Software: PyCharm
 
-import  sys,os
+
 from colorspacious import cspace_convert
 
-import colour
+
 import numpy as np
-from PyQt5 import QtCore, QtGui
+
 from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon,QPainter, QImage, QPixmap,QMouseEvent, QCursor
-from PyQt5.QtWidgets import  (QWidget,QHBoxLayout,QFrame,QLabel,
-                              QApplication,QMenu,QAction,QMessageBox)
+
 try:
     from .hue import  HueChart
 except:

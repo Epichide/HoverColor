@@ -13,14 +13,25 @@ from PyQt5.QtWidgets import  (QWidget,QHBoxLayout,QFrame,QLabel,QTableWidget,
 
 
 class RecordForm(QTableWidget):
+    def get_suggest_size(self,parent):
+        if parent is None:
+            self.defaultHeight = 175
+            self.defaultWidth = 160
+
+            self.font=8
+        else:
+            #0.02 + 0.850 + 0.01 + 0.06 +0.02
+            self.defaultHeight = parent.single_wid_width*0.95
+            self.defaultWidth = parent.single_wid_width*0.9
+
     def __init__(self,parent=None):
         super(RecordForm,self).__init__(parent)
+        self.get_suggest_size(parent)
         self.nrow=5
         self.ncol=2
         self.func=None
         self.connected_wid=None
-        self.defaultHeight=175
-        self.defaultWidth=160
+
         self.setMinimumSize(1,1)
         self.setGeometry(QtCore.QRect(0, 0, self.defaultWidth, self.defaultHeight))
         self.setFixedSize(self.defaultWidth, self.defaultHeight)

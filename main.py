@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QCheckBox, QLabel, QWidget, QHBoxLayout, QApplicatio
 #from src.color_platte import get_average_clor
 from src.RGB import RGBBar
 from src.Lab import LabChart
-from src.Jch import JchChart
+# from src.Jch import JchChart
 from src.XYZ import XYZChart
 from src.hue import HueChart
 from src.record import RecordForm
@@ -25,9 +25,19 @@ class App(QWidget):
 
     colorChanged=pyqtSignal(QColor)
     cursor_moved =pyqtSignal(object)
+    def get_suggetst_size(self):
+        screenshoot = QApplication.primaryScreen()
+        geometry=screenshoot.geometry()
+        screen_width=geometry.width()
+        screen_height=geometry.height()
+        self.single_wid_height=screen_height*0.15
+        self.single_wid_width=screen_height*0.15
+        print(self.single_wid_height,self.single_wid_width)
+        return self.single_wid_width,self.single_wid_height
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
+        self.get_suggetst_size()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
                              |Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -53,12 +63,14 @@ class App(QWidget):
         # square screenshot widget
         # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
         # qtApp = QApplication(sys.argv)
+        window_icon = QIcon('src/icon/icon.png')  # 替换为你的图标文件路径
+        self.setWindowIcon(window_icon)
 
         # qtApp.exec()
         self.shot1=Screenshoot()
         self.rgb_bar=RGBBar(self)
         self.lab_bar=LabChart(self)
-        self.jch_bar=JchChart(self)
+        # self.jch_bar=JchChart(self)
         self.hsv_bar=HueChart(self,"hsv")
         self.XYZ_bar=XYZChart(self,"XYZ")
         # self.lab_bar=HueChart(self,"lab")
@@ -67,7 +79,7 @@ class App(QWidget):
         self.contextMenuPolicy()
         self.Hlayout=QHBoxLayout(self)
         self.bar_widgets=[self.rgb_bar,self.hsv_bar,
-                          self.lab_bar,self.jch_bar,self.XYZ_bar,self.record]
+                          self.lab_bar,self.XYZ_bar,self.record]#self.jch_bar,
         self.init_menu()
         for wid in self.bar_widgets:
             self.Hlayout.addWidget(wid)
@@ -84,11 +96,11 @@ class App(QWidget):
         self.submenu_gamut=QMenu("Gamut",self.menu)
         self.register_action(self.rgb_bar,self.submenu_palette,"RGB")
         self.register_action(self.hsv_bar,self.submenu_palette, "HSV")
-        self.register_action(self.jch_bar,self.submenu_palette, "JCh")
+        # self.register_action(self.jch_bar,self.submenu_palette, "JCh")
         self.register_action(self.lab_bar,self.submenu_palette, "Lab")
         self.register_action(self.XYZ_bar,self.submenu_palette, "XYZ")
         self.register_record_action(self.submenu,self.hsv_bar,"HSV")
-        self.register_record_action(self.submenu,self.jch_bar,"Jch")
+        # self.register_record_action(self.submenu,self.jch_bar,"Jch")
         self.register_record_action(self.submenu,self.rgb_bar,"RGB")
         self.register_record_action(self.submenu,self.lab_bar,"Lab")
         self.register_record_action(self.submenu,self.XYZ_bar,"XYZ")
@@ -116,7 +128,7 @@ class App(QWidget):
         for wid in self.bar_widgets:
             if wid.isVisible():
                 w+=wid.width()*1.2
-        self.setFixedSize(QSize(int(w),200))
+        self.setFixedSize(QSize(int(w),self.single_wid_height))
     def _initSignals(self):
         self.ctrled=0
         self.shifted=0

@@ -7,11 +7,11 @@
 # @Software: PyCharm
 
 
-import colour
-from colour.colorimetry import CCS_ILLUMINANTS
-from colour.models import xy_to_XYZ, xy_to_xyY, xyY_to_XYZ
+# import colour
+# from colour.colorimetry import CCS_ILLUMINANTS
+# from colour.models import xy_to_XYZ, xy_to_xyY, xyY_to_XYZ
 import numpy as np
-from colour.models.rgb import RGB_COLOURSPACES, RGB_to_XYZ, XYZ_to_RGB
+# from colour.models.rgb import RGB_COLOURSPACES, RGB_to_XYZ, XYZ_to_RGB
 
 #
 # White_ILLUMINANTS_XYZ={
@@ -588,6 +588,117 @@ def color_space_transform(input_color, fromSpace2toSpace):
         sys.exit('Error: The color transform %s is not defined!' % fromSpace2toSpace)
 
     return transformed_color
+
+
+def color_RGB_to_HSV(rgb):
+    """
+    将RGB颜色转换为HSV颜色
+    RGB值范围为[0, 1]
+    HSV中H范围为[0, 1], S和V范围为[0, 1]
+
+    参数:
+        rgb: numpy数组，形状可以是(3,)单个像素或(n, m, 3)图像
+
+    返回:
+        hsv: numpy数组，与输入形状相同
+    """
+    rgb = np.asarray(rgb, dtype=np.float64)
+    orig_shape = rgb.shape
+
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+
+    max_val = np.max(rgb, axis=-1)
+    min_val = np.min(rgb, axis=-1)
+    delta = max_val - min_val
+
+    hsv = np.zeros_like(rgb)
+    h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+
+    # 计算明度V
+    v[v>=0] = max_val
+
+    # 计算饱和度S
+    mask = max_val != 0
+    s[mask] = delta[mask] / max_val[mask]
+
+    # 计算色相H（范围[0,1]）
+    mask = delta != 0  # 非灰色区域
+
+    # 红色为主色调
+    r_mask = (r == max_val) & mask
+    h[r_mask] = (g[r_mask] - b[r_mask]) / delta[r_mask]
+
+    # 绿色为主色调
+    g_mask = (g == max_val) & mask
+    h[g_mask] = 2.0 + (b[g_mask] - r[g_mask]) / delta[g_mask]
+
+    # 蓝色为主色调
+    b_mask = (b == max_val) & mask
+    h[b_mask] = 4.0 + (r[b_mask] - g[b_mask]) / delta[b_mask]
+
+    # 将H从[0,6)范围转换为[0,1)
+    h[v>=0] /= 6.0
+    # 处理负数情况，确保在[0,1)范围内
+    h[h < 0] += 1.0
+
+    return hsv.reshape(orig_shape)
+
+
+
+def color_HSV_to_RGB(hsv):
+    """
+    将HSV颜色转换为RGB颜色
+    HSV中H范围为[0,1], S和V范围为[0, 1]
+    RGB值范围为[0, 1]
+
+    参数:
+        hsv: numpy数组，形状可以是(3,)单个像素或(n, m, 3)图像
+
+    返回:
+        rgb: numpy数组，与输入形状相同 0-1
+    """
+    hsv = np.asarray(hsv, dtype=np.float64)
+    orig_shape = hsv.shape
+    # 统一为二维 (N,3)
+
+
+    h, s, v = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+
+    i = np.floor(h * 6)
+    f = h * 6 - i
+    p = v * (1 - s)
+    q = v * (1 - f * s)
+    t = v * (1 - (1 - f) * s)
+
+    rgb = np.zeros_like(hsv)
+    r,g,b=rgb[...,0],rgb[...,1],rgb[...,2]
+    r[i==0]=v[i==0]
+    g[i==0]=t[i==0]
+    b[i==0]=p[i==0]
+
+    r[i == 1] = q[i == 1]
+    g[i == 1] = v[i == 1]
+    b[i == 1] = p[i == 1]
+
+    r[i == 2] = p[i == 2]
+    g[i == 2] = v[i == 2]
+    b[i == 2] = t[i == 2]
+
+    r[i == 3] = p[i == 3]
+    g[i == 3] = q[i == 3]
+    b[i == 3] = v[i == 3]
+
+    r[i == 4] = t[i == 4]
+    g[i == 4] = p[i == 4]
+    b[i == 4] = v[i == 4]
+
+    r[i == 5] = v[i == 5]
+    g[i == 5] = p[i == 5]
+    b[i == 5] = q[i == 5]
+
+
+    return rgb.reshape(orig_shape)
+
 
 if __name__ == '__main__':
     # get_XYZD65_to_AC1C2_M()

@@ -7,29 +7,22 @@
 # @Software: PyCharm
 #ref1:https://www.jianshu.com/p/854ca5f13ce6
 #ref2:https://zhajiman.github.io/post/chromaticity_diagram/#%E6%9C%80%E7%BB%88%E6%95%88%E6%9E%9C
-import os
 
-import numpy as np
-from matplotlib import pyplot as plt
 
 from src.color_utils.color_utils import color_RGB_to_XYZ, color_XYZ_to_RGB, color_XYZ_to_xyY, color_xyY_to_XYZ
 import math
 import  sys,os
 
-import matplotlib.pyplot as plt
 
 try:
     from .color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
 except:
     from color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
 
-import colour
 import numpy as np
-from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon,QPainter, QImage, QPixmap,QMouseEvent, QCursor
-from PyQt5.QtWidgets import  (QWidget,QHBoxLayout,QFrame,QLabel,
-                              QApplication,QMenu,QAction,QMessageBox)
+
 try:
     from .hue import  HueChart
 except:

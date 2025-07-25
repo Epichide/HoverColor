@@ -16,6 +16,8 @@ example
     reset : ctrl + 0
 
 ## update log
+- 20250725:
+  - adaptive resolution and size
 - 20250719:
   - add BT2020 BT09 gamut
   - TODO : JCH support different gamut

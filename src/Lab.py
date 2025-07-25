@@ -8,20 +8,17 @@
 import math
 import  sys,os
 
-import matplotlib.pyplot as plt
+
 
 try:
     from .color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
 except:
     from color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
 
-import colour
 import numpy as np
-from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon,QPainter, QImage, QPixmap,QMouseEvent, QCursor
-from PyQt5.QtWidgets import  (QWidget,QHBoxLayout,QFrame,QLabel,
-                              QApplication,QMenu,QAction,QMessageBox)
+
 try:
     from .hue import  HueChart
 except:
