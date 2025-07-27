@@ -32,6 +32,8 @@ class LabChart(HueChart):
         self.colorspace = "Lab"
         self.metric = "ΔE2000"
         self.gamut= gamut
+        self.create_background()
+    def create_background(self):
         self.load_lab_img()
     def load_lab_img(self):
         nsize=500

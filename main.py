@@ -3,7 +3,9 @@ import  sys,os
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QEventLoop, Qt, pyqtSlot, QPoint, pyqtSignal, QTimer, QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon, QMouseEvent, QCursor, QPixmap
-from PyQt5.QtWidgets import QCheckBox, QLabel, QWidget, QHBoxLayout, QApplication, QMenu, QAction, QMessageBox, \
+from PyQt5.QtWidgets import QCheckBox, QLabel, QSpinBox, QVBoxLayout, QWidget, QHBoxLayout, QApplication, QMenu, \
+    QAction, \
+    QMessageBox, \
     QWidgetAction
 #from src.color_platte import get_average_clor
 from src.RGB import RGBBar
@@ -34,21 +36,31 @@ class App(QWidget):
         self.single_wid_width=screen_height*0.15
         print(self.single_wid_height,self.single_wid_width)
         return self.single_wid_width,self.single_wid_height
+    def set_zoom_size(self,ratio):
+        self.zoom_ratio=ratio
+        for wid in self.bar_widgets:
+            if hasattr(wid,"set_zoom_size"):
+                wid.set_zoom_size(ratio)
+        self.update_width()
+
 
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        self.get_suggetst_size()
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
                              |Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setMouseTracking(True)
+        self.get_suggetst_size()
+        # variable:
         self.hotkey_funcs={}
         self.func_hotkeys={}
         self.hotkey_workeds={}
+
         self._initUI()
         self._initSignals()
-        self.load_profile()
         self.customContextMenuRequested.connect(self.rightmenu)
+        self.load_profile()
+
         self.show()
         self.shot1.show()
     def rightmenu(self):
@@ -84,14 +96,14 @@ class App(QWidget):
         for wid in self.bar_widgets:
             self.Hlayout.addWidget(wid)
         # self.Hlayout.addWidget(self.record)
-        self.update_width()
+
     def init_menu(self):
         self.action_keys={}
         self.widget_keys={}
         self.record_keys={}
         self.gamut_keys={}
         self.menu=QMenu(self)
-        self.submenu=QMenu("Record",self.menu)
+        self.submenu_record=QMenu("Record",self.menu)
         self.submenu_palette=QMenu("ColorSpace",self.menu)
         self.submenu_gamut=QMenu("Gamut",self.menu)
         self.register_action(self.rgb_bar,self.submenu_palette,"RGB")
@@ -99,18 +111,14 @@ class App(QWidget):
         # self.register_action(self.jch_bar,self.submenu_palette, "JCh")
         self.register_action(self.lab_bar,self.submenu_palette, "Lab")
         self.register_action(self.XYZ_bar,self.submenu_palette, "XYZ")
-        self.register_record_action(self.submenu,self.hsv_bar,"HSV")
-        # self.register_record_action(self.submenu,self.jch_bar,"Jch")
-        self.register_record_action(self.submenu,self.rgb_bar,"RGB")
-        self.register_record_action(self.submenu,self.lab_bar,"Lab")
-        self.register_record_action(self.submenu,self.XYZ_bar,"XYZ")
         gamuts=["P3-D65","sRGB","P3-DCI","Rec.709","Rec.2020","AdobeRGB"]
         for gamut in gamuts:
             self.register_gamut_action(self.submenu_gamut,gamut)
-        self.menu.addMenu(self.submenu)
+        self.menu.addMenu(self.submenu_record)
         self.menu.addMenu(self.submenu_palette)
         self.menu.addMenu(self.submenu_gamut)
-
+        self.zoom_box=self.register_zoom_action()
+        self.zoom_box.valueChanged.connect(lambda value:self.set_zoom_size(value/100))
         self.action_hotkey = QAction("快捷键设置", self)
         self.menu.addAction(self.action_hotkey)
         self.action_hotkey.triggered.connect(self.Hotkey_Setting)
@@ -128,7 +136,7 @@ class App(QWidget):
         for wid in self.bar_widgets:
             if wid.isVisible():
                 w+=wid.width()*1.2
-        self.setFixedSize(QSize(int(w),self.single_wid_height))
+        self.setFixedSize(QSize(int(w),int(self.single_wid_height*self.zoom_ratio)+1))
     def _initSignals(self):
         self.ctrled=0
         self.shifted=0
@@ -141,7 +149,7 @@ class App(QWidget):
         self.timer.timeout.connect(self.pullCursor)
         self.timer.start()
         self.press_pos=self.pos()
-        self.connect_record("HSV")
+        self.connect_show_record("HSV")
         self.set_gamut(gamut="P3-D65")
         self.inhotkey=False
         # register hotkey
@@ -163,6 +171,7 @@ class App(QWidget):
         submenu.addAction(act)
         self.gamut_keys[gamut] = act
         act.triggered.connect(lambda: self.set_gamut(gamut))
+
     def set_gamut(self,gamut="P3-D65"):
         for tgamut, act in self.gamut_keys.items():
             act.setChecked(False)
@@ -178,14 +187,14 @@ class App(QWidget):
         act.setCheckable(True)
         submenu.addAction(act)
         self.record_keys[tex]=[wid,act]
-        act.triggered.connect(lambda :self.connect_record(tex))
-    def connect_record(self,key):
-        self.record.dis_connect_wid()
+        self.record.connect_wid(wid)
+        act.triggered.connect(lambda :self.connect_show_record(tex))
+    def connect_show_record(self,key):
         for wid,act in self.record_keys.values():
             act.setChecked(False)
         wid,act=self.record_keys[key]
         act.setChecked(True)
-        self.record.connect_wid(wid,key)
+        self.record.set_show_wid(wid)
 
     #####--------- COLORSPACE----------------
     def create_checkale_action(self,name,submenu=None,icon=None):
@@ -207,7 +216,50 @@ class App(QWidget):
         self.action_keys[key]=action_i
         self.widget_keys[action_i]=widget
         action_i.clicked.connect(lambda status :self.change_picker_widget(key))
+        self.register_record_action(self.submenu_record, widget, key)
         # action_i.triggered.connect(lambda :self.change_picker_widget(key))
+
+    def register_zoom_action(self,submenu=None):
+        act = QWidgetAction(self)
+        act.setText("zoom")
+
+        # 创建一个容器部件来放置QSpinBox
+        qwid = QWidget(self.menu)
+        # 使用QHBoxLayout控制水平方向的对齐
+        hbox = QHBoxLayout(qwid)
+
+        # 添加伸缩项，将SpinBox推到右侧
+        hbox.addStretch(10)  # 这会占据左侧所有可用空间，将SpinBox挤到右边
+
+        # 配置缩放SpinBox
+        zoom_box = QSpinBox(qwid)
+        zoom_box.setMinimum(25)
+        zoom_box.setMaximum(175)
+        zoom_box.setSingleStep(10)
+        zoom_box.setValue(100)
+        zoom_box.setFixedWidth(70)
+
+        # 清除布局边距
+        hbox.setContentsMargins(0, 0, 0, 0)
+        qwid.setContentsMargins(0, 0, 0, 0)
+
+        # 将SpinBox添加到布局
+        hbox.addWidget(zoom_box)
+        hbox.addStretch(10)
+
+        # 设置容器部件的大小策略，确保它能扩展到可用空间
+        # qwid.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+
+        # 将容器部件设置为动作的默认部件
+        act.setDefaultWidget(qwid)
+
+        # 将动作添加到菜单或子菜单
+        if submenu is None:
+            self.menu.addAction(act)
+        else:
+            submenu.addAction(act)
+
+        return zoom_box
 
 
     def check_dispay_widget_num(self):
@@ -230,7 +282,7 @@ class App(QWidget):
         self.update_width()
     #####--------- PROFILE----------------
     def log_profile(self):
-        self.profile={"colorspace":{},"hotkeys":{},"gamut":""}
+        self.profile={"colorspace":{},"hotkeys":{},"gamut":"","zoom":100}
         # SAVE GAMUT shown
         for gamut,act in self.gamut_keys.items():
             if act.isChecked():
@@ -251,14 +303,18 @@ class App(QWidget):
             if act.isChecked():
                 self.profile["record"]=record
         # save profile as json
+        self.profile["zoom"]=self.zoom_ratio*100
         import json
         fileName="src/profile/profile"
+        if not os.path.exists(fileName):
+            os.makedirs(fileName)
         with open(fileName, 'w', encoding='utf-8') as file:
             json.dump(self.profile, file, ensure_ascii=False, indent=4)
 
     def load_profile(self):
         import json
         fileName="src/profile/profile"
+        self.set_zoom_size(1)
         if not os.path.exists(fileName):return
 
         with open(fileName, 'r', encoding='utf-8') as file:
@@ -277,7 +333,7 @@ class App(QWidget):
         self.update_width()
         #load record
         record=self.profile["record"]
-        self.connect_record(record)
+        self.connect_show_record(record)
         #load hotkeys
         hot_keys=self.profile["hotkeys"]
         self.hotkey_workeds = {}
@@ -289,9 +345,8 @@ class App(QWidget):
             if qtkeys:
                 self.hotkey_funcs[qtkeys_str] = [func, funcname, qtkeys]
                 self.hotkey_workeds[qtkeys_str] = False
-
-
-
+        zoom=self.profile["zoom"]
+        self.zoom_box.setValue(int(zoom))
 
 
     #####--------- HOTKEY----------------

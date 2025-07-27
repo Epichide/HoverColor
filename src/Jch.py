@@ -25,6 +25,8 @@ class JchChart(HueChart):
         super().__init__(parent)
         self.colorspace = "Jch"
         self.metric = ""
+
+    def create_background(self):
         self.load_jch_img()
     def load_jch_img(self):
         nsize=500

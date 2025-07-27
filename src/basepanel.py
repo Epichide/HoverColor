@@ -13,6 +13,11 @@ from PyQt5.QtWidgets import  QWidget,QHBoxLayout,QApplication,QMenu,QAction,QMes
 class BaseWidget(QWidget):
 
     pos_value_signal=pyqtSignal(list)
+    def __init__(self,parent=None,mode="hsv"):
+        super().__init__(parent)
+        self.ratio=1
+    def set_zoom_size(self,ratio=1):
+        self.ratio=ratio
     def pick_color(self,v1,v2,v3):
         pass
     def freeze_cursor(self):

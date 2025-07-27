@@ -24,11 +24,84 @@ except:
     from basepanel import  BaseWidget
 
 class HueChart(BaseWidget):
+    def set_zoom_size(self, ratio=1):
+        self.ratio=ratio
+        wid_width=self.wid_width*self.ratio
+        hue_width = 0.85 * self.wid_width*self.ratio
+        luma_width = 0.06 * self.wid_width*self.ratio
+        margin = 0.02 * self.wid_width*self.ratio
+        mid_margin = 0.01 * self.wid_width*self.ratio
+        font_size = self.wid_width / 150 * 8*self.ratio
+        pos_width = 0.06 * self.wid_width*self.ratio
+
+        self.setFixedSize(wid_width, wid_width)
+        self.hue.setGeometry(QtCore.QRect(margin, margin, hue_width, hue_width))
+        self.luma.setGeometry(
+            QtCore.QRect(margin + mid_margin + hue_width, margin, luma_width, hue_width))
+        self.hue_old1.setGeometry(QtCore.QRect(hue_width/2-pos_width*0.5,hue_width/2-pos_width*0.5,pos_width,pos_width))
+        self.hue_old2.setGeometry(QtCore.QRect(hue_width/2-pos_width*0.5,hue_width/2-pos_width*0.5,pos_width,pos_width))
+        self.luma_old1.setGeometry((QtCore.QRect(0, hue_width-pos_width/2, pos_width,pos_width)))
+        self.luma_old2.setGeometry((QtCore.QRect(0, hue_width-pos_width/2, pos_width,pos_width)))
+        self.hue_cur.setGeometry(QtCore.QRect(hue_width/2-pos_width*0.5,hue_width/2-pos_width*0.5,pos_width,pos_width))
+        self.luma_cur.setGeometry((QtCore.QRect(0, 0, pos_width, pos_width/2)))
+
+
+        self.hue.setStyleSheet(
+            "border-style: outset;\n"
+            "border-width: 1px;\n"
+            f"font-size: {font_size}px;\n"
+            f"border-radius: {int(hue_width / 2)}px;\n"
+        )
+
+        self.luma_cur.setStyleSheet(
+            "background-color: rgba(255,255,255,0.5);\n"
+            # "border-radius: 50px;\n"
+            "border-style: outset;\n"
+            "border-width: 1px;\n"
+        )
+
+        self.hue_cur.setStyleSheet(
+            # "background-color: red;\n"
+            # "border-style: outset;\n"
+            "border: 1px solid #000000;"
+            # "border-width: 1px;\n"
+            "border-radius: 1px;\n"
+            "font-style: bold;\n"
+            "font-family: Arial;\n"
+            "font-style: bold;\n"
+        )
+
+        for pos_wid,color in zip([self.hue_old1,self.hue_old2],["black","rgba(255,255,255,0.8)"]):
+            pos_wid.setStyleSheet(
+                f"background-color: {color};\n"
+                "border-color: gray;\n"
+                "border-width: 1px;\n"
+                f"border-radius: {int(pos_wid.width() / 2)}px;\n"
+                f"font-size: {1}px;\n"
+                f"font-family: Arial;\n"
+                f"font-style: bold;\n"
+            )
+        for pos_wid,color in zip([self.luma_old1,self.luma_old2],["black","rgba(255,255,255,0.8)"]):
+            font = QtGui.QFont()
+            font.setFamily("Arial")
+            font.setPointSize(self.font_size)
+            font.setBold(True)
+            pos_wid.setFont(font)
+            pos_wid.setAlignment(QtCore.Qt.AlignCenter)
+            pos_wid.setStyleSheet(
+                f"background-color: {color};\n"
+                "border-style: outset;\n"
+                "border-color: gray;\n"
+                "border-width: 1px;\n"
+                "border-radius: 4px;"
+            )
+        self.create_background()
+
+
     def get_suggest_size(self,parent):
         if parent is None:
             self.wid_width=200
             self.font=8
-
         else:
             #0.02 + 0.850 + 0.01 + 0.06 +0.02
             self.wid_width=parent.single_wid_width
@@ -40,31 +113,19 @@ class HueChart(BaseWidget):
         self.pos_width=0.06*self.wid_width
 
 
-
-    def __init__(self,parent=None,mode="hsv"):
+    def __init__(self,parent=None,mode="hsv",gamut="P3-D65"):
         super().__init__(parent)
         self.colorspace = "HSV"
-        self.get_suggest_size(parent)
         self.metric = ""
-        self.setFixedSize(self.wid_width,self.wid_width)
+        self.gamut=gamut
         self.hue=QLabel(self)
-        self.hue.setGeometry(QtCore.QRect(self.margin,self.margin,self.hue_width,self.hue_width))
-        font=QtGui.QFont()
-        font.setPointSize(self.font_size)
-        self.hue.setFont(font)
-
-        self.hue.setStyleSheet(
-            "border-style: outset;\n"
-            "border-width: 1px;\n"
-            f"border-radius: {int(self.hue_width/2)}px;\n"
-        )
         self.hue.setFrameShape(QFrame.StyledPanel)
         self.hue.setFrameShadow(QFrame.Raised)
         self.hue.setLineWidth(2)
         self.setObjectName("hue")
         palatte=QtGui.QPalette()
         self.luma = QFrame(self)
-        self.luma.setGeometry(QtCore.QRect(self.margin+self.mid_margin+self.hue_width,self.margin,self.luma_width,self.hue_width))
+
         self.luma.setStyleSheet(
             "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(255,255,255,255), stop:1 rgba(0,0,0,255));\n"
             # "border-radius: 4px;"
@@ -75,15 +136,17 @@ class HueChart(BaseWidget):
         # self.horizontallayout.setContentsMargins(0, 0, 0, 0)
         # self.horizontallayout.addWidget(self.hue)
         # self.horizontallayout.addWidget(self.luma)
-        self.create_hsv_img()
+
         self.hue_cur=self.add_cur_hue_widget(self.hue)
         self.luma_cur=self.add_cur_luma_widget(self.luma)
-        self.hue_old1=self.add_pos_hue_widget(self.hue,"","black")
-        self.hue_old2=self.add_pos_hue_widget(self.hue,"","rgba(255,255,255,0.8)")
-        self.luma_old1=self.add_pos_luma_widget(self.luma,"","black")
-        self.luma_old2=self.add_pos_luma_widget(self.luma,"","rgba(255,255,255,0.8)")
-
-
+        self.hue_old1=self.add_pos_hue_widget(self.hue,"")
+        self.hue_old2=self.add_pos_hue_widget(self.hue,"")
+        self.luma_old1=self.add_pos_luma_widget(self.luma,"")
+        self.luma_old2=self.add_pos_luma_widget(self.luma,"")
+        self.get_suggest_size(parent)
+        self.set_zoom_size(1)
+    def create_background(self):
+        self.create_hsv_img()
     def create_hsv_img(self):
         nsize=500
         x=np.linspace(-1,1,nsize)
@@ -144,71 +207,27 @@ class HueChart(BaseWidget):
         # self.hue_cur.setStyleSheet("background-color: rgb(" + color_string + ");")
         self.pos_value_signal.emit([h,s,v])
         return h,s,v
-    def add_pos_hue_widget(self,wid,tex="",color=""):
+    def add_pos_hue_widget(self,wid,tex=""):
         pos_wid=QLabel(wid)
         pos_wid.setText(tex)
-        pos_wid.setGeometry(QtCore.QRect(self.hue_width/2-self.pos_width*0.5,self.hue_width/2-self.pos_width*0.5,self.pos_width,self.pos_width))
-        pos_wid.setStyleSheet(
-            f"background-color: {color};\n"
-            "border-color: gray;\n"
-            "border-width: 1px;\n"
-            "border-radius: 4px;"
-        )
-        font = QtGui.QFont()
-        font.setFamily("Arial")
-        font.setPointSize(self.font_size)
-        font.setBold(True)
-        pos_wid.setFont(font)
+
         return pos_wid
-    def add_cur_hue_widget(self,wid,color=None):
+    def add_cur_hue_widget(self,wid):
         pos_wid=QLabel(wid)
-        pos_wid.setGeometry(QtCore.QRect(self.hue_width/2-self.pos_width*0.5,self.hue_width/2-self.pos_width*0.5,self.pos_width,self.pos_width))
-        # pos_wid.setFrameShape(QFrame.NoFrame)
-        font = QtGui.QFont()
-        font.setFamily("Arial")
-        font.setPointSize(self.font_size)
-        font.setBold(True)
-        pos_wid.setFont(font)
         pos_wid.setText("")
-        pos_wid.setStyleSheet(
-            # "background-color: red;\n"
-            # "border-style: outset;\n"
-            "border: 1px solid #000000;"
-            # "border-width: 1px;\n"
-            "border-radius: 1px;"
-        )
+
+
 
 
         return pos_wid
 
     def add_pos_luma_widget(self, wid, tex="",color=""):
         pos_wid = QLabel(wid, text=tex)
-        pos_wid.setGeometry((QtCore.QRect(0, wid.height()-self.pos_width/2, self.pos_width,self.pos_width)))
-        font = QtGui.QFont()
-        font.setFamily("Arial")
-        font.setPointSize(self.font_size)
-        font.setBold(True)
-        pos_wid.setFont(font)
-        pos_wid.setAlignment(QtCore.Qt.AlignCenter)
-        pos_wid.setStyleSheet(
-            f"background-color: {color};\n"
-            "border-style: outset;\n"
-            "border-color: gray;\n"
-            "border-width: 1px;\n"
-            "border-radius: 4px;"
-        )
         return pos_wid
 
     def add_cur_luma_widget(self, wid):
         pos_wid = QLabel(wid)
-        pos_wid.setGeometry((QtCore.QRect(0, 0, self.pos_width, self.pos_width/2)))
-        pos_wid.setStyleSheet(
-            "background-color: rgba(255,255,255,0.5);\n"
-            # "border-radius: 50px;\n"
-            "border-style: outset;\n"
-            "border-width: 1px;\n"
 
-        )
         pos_wid.setText("")
         return pos_wid
     def freeze_cursor(self):

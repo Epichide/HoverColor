@@ -28,20 +28,24 @@ try:
 except:
     from  hue import  HueChart
 class XYZChart(HueChart):
-
-    def __init__(self,parent=None,mode="XYZ",gamut="P3-D65"):
-        super().__init__(parent,mode=mode)
+    def set_zoom_size(self, ratio=1):
+        super().set_zoom_size(ratio)
         self.hue.setObjectName("hue")
-
         self.hue.setStyleSheet("""
-                border-style: outset; border-width: 0px; border-radius: 0px;
-                """)
+                        border-style: outset; border-width: 0px; border-radius: 0px;
+                        """)
+    def __init__(self,parent=None,mode="XYZ",gamut="P3-D65"):
 
+        super().__init__(parent, mode=mode)
         self.XYZ_1 = None
         self.XYZ_2 = None
         self.colorspace = "XYZ"
         self.metric = ""
         self.gamut= gamut
+
+        self.create_background()
+
+    def create_background(self):
         self.load_xy_img()
     def load_xy_img(self):
         nsize=500

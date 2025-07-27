@@ -15,6 +15,47 @@ from PyQt5.QtWidgets import  (QWidget,QHBoxLayout,QFrame,QLabel,
                               QApplication,QMenu,QAction,QMessageBox)
 from .basepanel import  BaseWidget
 class RGBBar(BaseWidget):
+
+    def set_zoom_size(self, ratio=1):
+        self.ratio=ratio
+
+        wid_width=self.wid_width*self.ratio
+        wid_height=self.wid_height*self.ratio
+        bar_width=self.bar_width*self.ratio
+        font_size=self.font_size*self.ratio
+        
+        self.setFixedSize(wid_width, wid_height)
+        self.red.setFixedWidth(bar_width)
+        self.blue.setFixedWidth(bar_width)
+        self.green.setFixedWidth(bar_width)
+        for pos_wid,color in zip([self.blue.pos_old1,self.blue.pos_old2,self.red.pos_old1,self.red.pos_old2,self.green.pos_old1,self.green.pos_old2],
+                           ["black","rgba(255,255,255,0.8)","black","rgba(255,255,255,0.8)","black","rgba(255,255,255,0.8)"]):
+            shift=0.2
+            pos_wid.setGeometry((QtCore.QRect(shift * bar_width, wid_height - bar_width * 0.8,
+                                              bar_width * 0.8, bar_width * 0.8)))
+            pos_wid.setStyleSheet(
+                f"background-color: {color};\n"
+                "border-style: outset;\n"
+                "border-color: gray;\n"
+                "border-width: 1px;\n"
+                f"border-radius: {bar_width * 0.7 / 2}px;\n"
+            )
+            font = QtGui.QFont()
+            font.setFamily("Arial")
+            font.setPointSize(font_size)
+            font.setBold(True)
+            pos_wid.setFont(font)
+            pos_wid.setAlignment(QtCore.Qt.AlignCenter)
+        for pos_wid in [self.blue.cur,self.red.cur,self.green.cur]:
+            pos_wid.setGeometry((QtCore.QRect(0, 0, 30, 5)))
+            pos_wid.setStyleSheet(
+                "background-color: rgba(255,255,255,0.5);\n"
+                # "border-radius: 50px;\n"
+                "border-style: outset;\n"
+                "border-width: 1px;\n"
+            )
+            pos_wid.setText("")
+    
     def get_suggest_size(self,parent):
         if parent is None:
             self.wid_width=50
@@ -31,8 +72,8 @@ class RGBBar(BaseWidget):
 
     def __init__(self,parent=None):
         super(RGBBar,self).__init__(parent)
-        self.get_suggest_size(parent)
-        self.setFixedSize(self.wid_width,self.wid_height)
+
+        
         self.colorspace = "RGB"
         self.metric = "G"
         self.horizontallayout=QHBoxLayout(self)
@@ -54,50 +95,29 @@ class RGBBar(BaseWidget):
             "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0,0,255,255), stop:1 rgba(0,0,0,255));\n"
             # "border-radius: 4px;"
         )
-        self.red.setFixedWidth(self.bar_width)
-        self.blue.setFixedWidth(self.bar_width)
-        self.green.setFixedWidth(self.bar_width)
+
 
         self.horizontallayout.addWidget(self.red)
         self.horizontallayout.addWidget(self.green)
         self.horizontallayout.addWidget(self.blue)
-        self.blue.pos_old1=self.add_pos_widget(self.blue,"","black",0.2)
-        self.blue.pos_old2=self.add_pos_widget(self.blue,"","rgba(255,255,255,0.8)",0)
-        self.red.pos_old1 = self.add_pos_widget(self.red,"","black",0.2)
-        self.red.pos_old2 = self.add_pos_widget(self.red,"","rgba(255,255,255,0.8)",0)
-        self.green.pos_old1 = self.add_pos_widget(self.green,"","black",0.2)
-        self.green.pos_old2 = self.add_pos_widget(self.green,"","rgba(255,255,255,0.8)",0)
+        self.blue.pos_old1=self.add_pos_widget(self.blue,"")
+        self.blue.pos_old2=self.add_pos_widget(self.blue,"")
+        self.red.pos_old1 = self.add_pos_widget(self.red,"")
+        self.red.pos_old2 = self.add_pos_widget(self.red,"")
+        self.green.pos_old1 = self.add_pos_widget(self.green,"")
+        self.green.pos_old2 = self.add_pos_widget(self.green,"")
         self.red.cur=self.add_cur_widget(self.red)
         self.blue.cur=self.add_cur_widget(self.blue)
         self.green.cur=self.add_cur_widget(self.green)
+        self.get_suggest_size(parent)
+        self.set_zoom_size(0.5)
 
-    def add_pos_widget(self,wid,tex="",color="",shift=0.05):
+    def add_pos_widget(self,wid,tex=""):
         pos_wid=QLabel(wid,text=tex)
-        pos_wid.setGeometry((QtCore.QRect(shift*self.bar_width,self.wid_height-self.bar_width*0.8,self.bar_width*0.8,self.bar_width*0.8)))
-        pos_wid.setStyleSheet(
-            f"background-color: {color};\n"
-            "border-style: outset;\n"
-            "border-color: gray;\n"
-            "border-width: 1px;\n"
-            f"border-radius: {self.bar_width*0.7/2}px;\n"
-        )
-        font=QtGui.QFont()
-        font.setFamily("Arial")
-        font.setPointSize(self.font_size)
-        font.setBold(True)
-        pos_wid.setFont(font)
-        pos_wid.setAlignment(QtCore.Qt.AlignCenter)
         return pos_wid
-    def add_cur_widget(self,wid,color=""):
+    def add_cur_widget(self,wid):
         pos_wid=QLabel(wid)
-        pos_wid.setGeometry((QtCore.QRect(0,0,30,5)))
-        pos_wid.setStyleSheet(
-            "background-color: rgba(255,255,255,0.5);\n"
-            # "border-radius: 50px;\n"
-            "border-style: outset;\n"
-            "border-width: 1px;\n"
-        )
-        pos_wid.setText("")
+
         return pos_wid
 
 
