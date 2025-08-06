@@ -111,7 +111,64 @@ Gmaut_Illuminant={
     "P3-D60":"D60",#P3-D60 (ACES Cinema)
     "AdobeRGB":"D65",
 }
+CAM_dict={
+        "HPE-Eq" : np.array([
+        [0.38971, 0.68898, -0.07868],
+        [-0.22981, 1.18340, 0.04641],
+        [0.00000, 0.00000, 1]]),
 
+    "HPE-D65" : np.array([
+        [0.40024, 0.70760, -0.08081],
+        [-0.22630, 1.16532, 0.04570],
+        [0.00000, 0.00000, 0.91822]]),
+
+    "SHARP": np.array([
+        [1.2694, -0.0988, -0.1706],
+        [-0.8364, 1.8006, 0.0357],
+        [0.0297, -0.0315, 1.0018]]),
+
+    "CMCCAT2000" :np.array([[0.7982, 0.3389, -0.1371],
+                                      [-0.5918, 1.5512, 0.0406],
+                                      [0.0008, 0.2390, 0.9753]]),
+
+    "BFD": np.array([# Bradford,http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
+        [0.8951, 0.2664, -0.1614],
+        [-0.7502, 1.7135, 0.0367],
+        [0.0389, -0.0685, 1.0296]]),
+
+    "CAT97s": np.array([[0.8562, 0.3372, -0.1934],
+                                       [-0.8360, 1.8327, 0.0033],
+                                       [0.0357, -0.0469, 1.0112]]),
+
+    "CAT02": np.array([
+        [0.7328, 0.4296, -0.1624],
+        [-0.7036, 1.6975, 0.0061],
+        [0.0030, 0.0136, 0.9834]]),
+
+    "CAM16" : np.array([
+        [0.401288, 0.650173, -0.051461],
+        [-0.7036, 1.6975, 0.0061],
+        [0.0030, 0.0136, 0.9834]]),
+    "UCLLMS":np.array([ # https://www.strollswithmydog.com/cone-fundamental-lms-color-space/#footnote
+        [0.2106,0.8551,-0.0397],
+        [-0.4171,1.1773,0.0786],
+        [0,0,0.5168]]),
+    "BT2020":np.array([
+        [0.3592,0.6976,-0.0358],
+        [-0.1922,1.1004,0.0755],
+        [0.0070,0.0749,0.08434]]),
+    "CIELMS":#https://engineering.purdue.edu/~bouman/grad-labs/Colorimetry/pdf/lab.pdf
+        np.array([
+        [0.2430,0.8560,-0.0440],
+        [-0.3910,1.1650,0.0870],
+        [0.01,-0.008,0.5630]]),
+
+    "Vos":np.array([
+        [0.15514,0.8560,-0.0440],
+        [-0.15514,0.45684,0.03286],
+        [0,0,0.01608]]),
+
+}
 # ACES2065-1
 # ACES
 # ACEScct
@@ -124,6 +181,19 @@ Gmaut_Illuminant={
 # DCI-P3
 # DCI-P3+
 
+#------- Basic -----------
+def matric_transform(M,vec):
+    return np.einsum("...ij,...j->...i", np.array(M, dtype=np.float32), np.array(vec, dtype=np.float32))
+
+def range01(RGB):
+    RGB=np.array(RGB)
+    if (RGB>10).any() :
+        RGB=RGB/255
+    return RGB
+
+
+
+#------- xyY - XYZ -----------
 def color_xyY_to_XYZ(xyY):
     '''将xyY转换为XYZ.'''
     xyY = np.asarray(xyY)
@@ -143,16 +213,22 @@ def color_XYZ_to_xyY(XYZ):
     Y= XYZ[..., 1]
     xyY=np.stack((x, y, Y), axis=-1)
     return xyY
-def white_xy2XYZ(xy):
+
+#------- xy - XYZ -----------
+def white_xy2XYZ(xy,panel=1.0):
     # Y default is 1.0
-    z=1-xy[0]-xy[1]
+    z=panel-xy[0]-xy[1]
     XYZ=[xy[0]/xy[1],1.0,z/xy[1]]
     return XYZ
+
+
 def get_white_point_XYZ(illuminant="D65"):
-    if illuminant=="E":return [1.0,1.0,1.0]
-    white_xy=White_ILLUMINANTS_xy[illuminant]
-    white_XYZ=white_xy2XYZ(white_xy)
-    return  white_XYZ
+    if illuminant=="E":
+        white_XYZ= [1.0,1.0,1.0]
+    else:
+        white_xy=White_ILLUMINANTS_xy[illuminant]
+        white_XYZ=white_xy2XYZ(white_xy)
+    return  np.array(white_XYZ)
     # return WhiteILLUMINANTS[illuminant]
 def get_white_point_XYZ_colour(illuminant="D65"):
     illuminant = CCS_ILLUMINANTS['CIE 1931 2 Degree Standard Observer'][illuminant]
@@ -163,11 +239,6 @@ def compare_white_point_XYZ():
         xyz=get_white_point_XYZ(illuminant)
         xyz2=get_white_point_XYZ_colour(illuminant)
         # print(xyz,xyz2)
-def range01(RGB):
-    RGB=np.array(RGB)
-    if (RGB>10).any() :
-        RGB=RGB/255
-    return RGB
 def get_RGB_xyz(gamut="sRGB"):
     # primary RGB' xyz value
     rgb_xy=np.array(RGB_xy[gamut])
@@ -192,6 +263,19 @@ def get_RGB2XYZ_M(gamut="sRGB"):
     RGB2XYZ_M_CACHE[gamut]=M
     return M
 
+def get_XYZ2RGB_M(gamut="sRGB"):
+    """
+    Get the matrix to convert XYZ to RGB for a given color gamut.
+    :param gamut: The color gamut, e.g., "sRGB", "P3-D65", etc.
+    :return: The transformation matrix from XYZ to RGB.
+    """
+    global RGB2XYZ_M_CACHE
+    if gamut+"-INV" in RGB2XYZ_M_CACHE:
+        return RGB2XYZ_M_CACHE[gamut+"-INV"]
+    M=get_RGB2XYZ_M(gamut)
+    Minv=np.linalg.inv(M)
+    RGB2XYZ_M_CACHE[gamut+"-INV"]=Minv
+    return Minv
 def get_RGB2XYZ_M_colour(gamut="sRGB"):
     # print(RGB_COLOURSPACES.keys())
     # if gamut=="P3-D65":
@@ -264,8 +348,6 @@ def color_linearRGB_to_RGB(linearRGB,gamut="sRGB"):
     else:
         RGB=linearRGB
     return RGB
-def matric_transform(M,vec):
-    return np.einsum("...ij,...j->...i", np.array(M, dtype=np.float32), np.array(vec, dtype=np.float32))
 
 #------- RGB - XYZ -----------
 #------------------------------------
@@ -278,13 +360,8 @@ def color_RGB_to_XYZ(RGB,gamut="sRGB"):
     return XYZ
 
 def color_XYZ_to_RGB(XYZ,gamut="sRGB"):
-    global RGB2XYZ_M_CACHE
-    if gamut+"-INV" in RGB2XYZ_M_CACHE:
-        Minv=RGB2XYZ_M_CACHE[gamut+"-INV"]
-    else:
-        M = get_RGB2XYZ_M(gamut)
-        Minv=np.linalg.inv(M)
-        RGB2XYZ_M_CACHE[gamut + "-INV"] = Minv
+
+    Minv=get_XYZ2RGB_M(gamut)
     linearRGB =matric_transform(Minv,XYZ)
     # print("linearRGB",linearRGB)
     RGB= color_linearRGB_to_RGB(linearRGB,gamut)
@@ -311,69 +388,63 @@ def test_RGB_to_XYZ():
 
 
 # --------- XYZ - LMS/ρ, γ,  β ---------
-M_dict={
-        "HPE-Eq" : np.array([
-        [0.38971, 0.68898, -0.07868],
-        [-0.22981, 1.18340, 0.04641],
-        [0.00000, 0.00000, 1]]),
 
-    "HPE-D65" : np.array([
-        [0.40024, 0.70760, -0.08081],
-        [-0.22630, 1.16532, 0.04570],
-        [0.00000, 0.00000, 0.91822]]),
-
-    "SHARP": np.array([
-        [1.2694, -0.0988, -0.1706],
-        [-0.8364, 1.8006, 0.0357],
-        [0.0297, -0.0315, 1.0018]]),
-
-    "CMCCAT2000" :np.array([[0.7982, 0.3389, -0.1371],
-                                      [-0.5918, 1.5512, 0.0406],
-                                      [0.0008, 0.2390, 0.9753]]),
-
-    "BFD": np.array([
-        [0.8951, 0.2664, -0.1614],
-        [-0.7502, 1.7135, 0.0367],
-        [0.0389, -0.0685, 1.0296]]),
-
-    "CAT97s": np.array([[0.8562, 0.3372, -0.1934],
-                                       [-0.8360, 1.8327, 0.0033],
-                                       [0.0357, -0.0469, 1.0112]]),
-
-    "CAT02": np.array([
-        [0.7328, 0.4296, -0.1624],
-        [-0.7036, 1.6975, 0.0061],
-        [0.0030, 0.0136, 0.9834]]),
-
-    "CAM16" : np.array([
-        [0.401288, 0.650173, -0.051461],
-        [-0.7036, 1.6975, 0.0061],
-        [0.0030, 0.0136, 0.9834]]),
-    "UCLLMS":np.array([ # https://www.strollswithmydog.com/cone-fundamental-lms-color-space/#footnote
-        [0.2106,0.8551,-0.0397],
-        [-0.4171,1.1773,0.0786],
-        [0,0,0.5168]]),
-    "BT2020":np.array([
-        [0.3592,0.6976,-0.0358],
-        [-0.1922,1.1004,0.0755],
-        [0.0070,0.0749,0.08434]]),
-    "CIELMS":#https://engineering.purdue.edu/~bouman/grad-labs/Colorimetry/pdf/lab.pdf
-        np.array([
-        [0.2430,0.8560,-0.0440],
-        [-0.3910,1.1650,0.0870],
-        [0.01,-0.008,0.5630]]),
-
-    "Vos":np.array([
-        [0.15514,0.8560,-0.0440],
-        [-0.15514,0.45684,0.03286],
-        [0,0,0.01608]]),
-
-}
 def color_XYZ_to_LMS(XYZ,method="HPE-Eq"):
     #"method" : HPE-Eq,HPE-D65,BFD,SHARP,CAT90s,CAT20,CAM16
-    M=M_dict[method]
+    M=CAM_dict[method]
     LMS=matric_transform(M,XYZ)
     return  LMS
+# ---------- XYZ - Chromatic Adaptation ---------
+# http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
+def get_color_XYZ_CA_Matrix(fromIlluminant="D65",toIlluminant="D65",method="BFD"):
+    """
+    Get the chromatic adaptation matrix for converting from one illuminant to another.
+    :param fromIlluminant: The source illuminant (e.g., "D65").
+    :param toIlluminant: The target illuminant (e.g., "D65").
+    :param method: The chromatic adaptation method (e.g., "BFD", "CAT02", etc.).
+    :return: The chromatic adaptation matrix.
+    """
+    if fromIlluminant == toIlluminant:
+        return np.eye(3)
+
+    M = CAM_dict[method]
+    W_XYZ_from = get_white_point_XYZ(fromIlluminant)
+    W_XYZ_to = get_white_point_XYZ(toIlluminant)
+    M_inv = np.linalg.inv(M)
+    # M_inv=np.array([
+    #     [0.9869929 ,- 0.1470543,  0.1599627],
+    #     [0.4323053 , 0.5183603 , 0.0492912],
+    #     [- 0.0085287 , 0.0400428 , 0.9684867]
+    # ])
+
+    W_XYZ_from_cone = np.dot(M, W_XYZ_from)
+    W_XYZ_to_cone = np.dot(M, W_XYZ_to)
+
+    # Scale the white point of the source illuminant
+    scale = W_XYZ_to_cone / W_XYZ_from_cone
+    scale_M=M*scale[:, np.newaxis]
+    M_scaled = np.dot(M_inv, scale_M)
+    # M_scaled = M_inv * scale[:, np.newaxis]*M
+
+    return M_scaled
+def color_XYZ_chromatic_adaptation(XYZ,fromIlluminant="D65",toIlluminant="D65",method="BFD"):
+    """
+    Chromatic adaptation from one illuminant to another.
+    :param XYZ: The input color in XYZ space.
+    :param fromIlluminant: The source illuminant (e.g., "D65").
+    :param toIlluminant: The target illuminant (e.g., "D65").
+    :param method: The chromatic adaptation method (e.g., "BFD", "CAT02", etc.).
+    :return: The adapted color in XYZ space.
+    """
+    if fromIlluminant == toIlluminant:
+        return XYZ
+
+    M_scaled = get_color_XYZ_CA_Matrix(fromIlluminant, toIlluminant, method)
+
+    # Apply the chromatic adaptation matrix
+    adapted_XYZ = matric_transform(M_scaled, XYZ)
+
+    return adapted_XYZ
 
 # ---- XYZ - Lab
 def color_XYZ_to_Lab(XYZ,whitpoint="D65"):
@@ -448,6 +519,9 @@ def test_XYZ_to_Lab():
     XYZ2=colour.Lab_to_XYZ(Lab2)
     print(XYZ1,XYZ2)
 
+
+
+# --------- XYZ - YCxCz ---------
 def get_XYZD65_to_AC1C2_M(xyz_illuminant="D65"):
     M1=np.array([
         [1.0503,0.0271,-0.0233],
@@ -708,6 +782,8 @@ if __name__ == '__main__':
     # lab= color_RGB_to_Lab([55,95,180],gamut="P3-D65")
     # print(color_Lab_to_RGB(lab, gamut="P3-D65")*255)
     # print(color_Lab_to_RGB(lab, gamut="sRGB")*255)
+    print(color_RGB_to_XYZ([50,150,200],gamut="AdobeRGB"))
+    print(get_color_XYZ_CA_Matrix(fromIlluminant="D65", toIlluminant="D50", method="BFD"))
 
     # lab = color_RGB_to_Lab(np.array([100, 20, 80])/255,gamut="P3-DCI") #24.12231082  46.83461498 -16.35073021
     # lab=np.array([50, -300, -300])
