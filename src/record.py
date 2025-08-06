@@ -15,15 +15,24 @@ from PyQt5.QtWidgets import  (QWidget,QHBoxLayout,QFrame,QLabel,QTableWidget,
 
 
 class RecordForm(QTableWidget):
+    def set_font_size(self,fontsize):
+        self.font_size1=fontsize
+        font_size = self.font_size1 * self.ratio
+        font= self.horizontalHeader().font()
+        font.setPixelSize(font_size)
+        self.horizontalHeader().setFont(font)
+        font = self.font()
+        font.setPixelSize(font_size)
+        self.setFont(font)
     def set_zoom_size(self, ratio=1):
         self.ratio=ratio
         defaultHeight=self.defaultHeight*self.ratio
         defaultWidth=self.defaultWidth*self.ratio
-        font_size =self.font_size *self.ratio
+        font_size =self.font_size1 *self.ratio
         
         font=self.font()
         font.setPixelSize(font_size)
-        self.setFont(font)
+        # self.setFont(font)
         self.setGeometry(QtCore.QRect(0, 0, defaultWidth, defaultHeight))
         self.setFixedSize(defaultWidth, defaultHeight)
         self.setFixedWidth(defaultWidth)
@@ -40,12 +49,12 @@ class RecordForm(QTableWidget):
         if parent is None:
             self.defaultHeight = 175
             self.defaultWidth = 160
-            self.font_size=8
+            self.font_size1=8
         else:
             #0.02 + 0.850 + 0.01 + 0.06 +0.02
             self.defaultHeight = parent.single_wid_width*0.95
             self.defaultWidth = parent.single_wid_width*0.9
-            self.font_size = 10
+            self.font_size1 = 10
 
     def __init__(self,parent=None):
         super(RecordForm,self).__init__(parent)

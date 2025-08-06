@@ -42,6 +42,11 @@ class App(QWidget):
             if hasattr(wid,"set_zoom_size"):
                 wid.set_zoom_size(ratio)
         self.update_width()
+    def set_font_size(self,value):
+        self.record.set_font_size(value)
+        # self.set_zoom_size(self.zoom_ratio)
+
+
 
 
     def __init__(self,*args,**kwargs):
@@ -93,9 +98,9 @@ class App(QWidget):
         self.bar_widgets=[self.rgb_bar,self.hsv_bar,
                           self.lab_bar,self.XYZ_bar,self.record]#self.jch_bar,
         self.init_menu()
+
         for wid in self.bar_widgets:
             self.Hlayout.addWidget(wid)
-        # self.Hlayout.addWidget(self.record)
 
     def init_menu(self):
         self.action_keys={}
@@ -106,6 +111,7 @@ class App(QWidget):
         self.submenu_record=QMenu("Record",self.menu)
         self.submenu_palette=QMenu("ColorSpace",self.menu)
         self.submenu_gamut=QMenu("Gamut",self.menu)
+        self.submenu_size=QMenu("Size",self.menu)
         self.register_action(self.rgb_bar,self.submenu_palette,"RGB")
         self.register_action(self.hsv_bar,self.submenu_palette, "HSV")
         # self.register_action(self.jch_bar,self.submenu_palette, "JCh")
@@ -117,7 +123,9 @@ class App(QWidget):
         self.menu.addMenu(self.submenu_record)
         self.menu.addMenu(self.submenu_palette)
         self.menu.addMenu(self.submenu_gamut)
-        self.zoom_box=self.register_zoom_action()
+        self.menu.addMenu(self.submenu_size)
+        self.zoom_box,self.font_box=self.register_scale_action(self.submenu_size)
+        self.font_box.valueChanged.connect(lambda value: self.set_font_size(value))
         self.zoom_box.valueChanged.connect(lambda value:self.set_zoom_size(value/100))
         self.action_hotkey = QAction("快捷键设置", self)
         self.menu.addAction(self.action_hotkey)
@@ -218,48 +226,39 @@ class App(QWidget):
         action_i.clicked.connect(lambda status :self.change_picker_widget(key))
         self.register_record_action(self.submenu_record, widget, key)
         # action_i.triggered.connect(lambda :self.change_picker_widget(key))
-
-    def register_zoom_action(self,submenu=None):
+    def create_spin_action(self,name,vmin,vmax,step=1,submenu=None):
         act = QWidgetAction(self)
-        act.setText("zoom")
-
-        # 创建一个容器部件来放置QSpinBox
-        qwid = QWidget(self.menu)
-        # 使用QHBoxLayout控制水平方向的对齐
+        act.setText(name)
+        qwid = QWidget(self)
         hbox = QHBoxLayout(qwid)
-
+        qlabel=QLabel(self)
+        qlabel.setText(name)
         # 添加伸缩项，将SpinBox推到右侧
-        hbox.addStretch(10)  # 这会占据左侧所有可用空间，将SpinBox挤到右边
-
-        # 配置缩放SpinBox
-        zoom_box = QSpinBox(qwid)
-        zoom_box.setMinimum(25)
-        zoom_box.setMaximum(175)
-        zoom_box.setSingleStep(10)
-        zoom_box.setValue(100)
-        zoom_box.setFixedWidth(70)
-
+        # hbox.addStretch(5)  # 这会占据左侧所有可用空间，将SpinBox挤到右边
         # 清除布局边距
         hbox.setContentsMargins(0, 0, 0, 0)
         qwid.setContentsMargins(0, 0, 0, 0)
 
         # 将SpinBox添加到布局
-        hbox.addWidget(zoom_box)
-        hbox.addStretch(10)
-
-        # 设置容器部件的大小策略，确保它能扩展到可用空间
-        # qwid.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-
-        # 将容器部件设置为动作的默认部件
+        spin_box = QSpinBox(qwid)
+        spin_box.setMinimum(vmin)
+        spin_box.setMaximum(vmax)
+        spin_box.setSingleStep(step)
+        spin_box.setFixedWidth(70)
+        hbox.addWidget(qlabel)
+        hbox.addWidget(spin_box)
+        # hbox.addStretch(5)
         act.setDefaultWidget(qwid)
-
-        # 将动作添加到菜单或子菜单
         if submenu is None:
             self.menu.addAction(act)
         else:
             submenu.addAction(act)
+        return spin_box
+    def register_scale_action(self,submenu=None):
+        zoom_box=self.create_spin_action("zoom",vmin=25,vmax=225,step=10,submenu=submenu)
+        font_box=self.create_spin_action("font",vmin=2,vmax=70,step=1,submenu=submenu)
 
-        return zoom_box
+        return zoom_box,font_box
 
 
     def check_dispay_widget_num(self):
@@ -279,6 +278,7 @@ class App(QWidget):
                 self.widget_keys[act].show()
         else:
             self.action_keys[key].setChecked(True)
+        # self.record.show()
         self.update_width()
     #####--------- PROFILE----------------
     def log_profile(self):
@@ -304,17 +304,19 @@ class App(QWidget):
                 self.profile["record"]=record
         # save profile as json
         self.profile["zoom"]=self.zoom_ratio*100
+        self.profile["fontsize"]=self.record.font_size1
         import json
         fileName="src/profile/profile"
-        if not os.path.exists(fileName):
-            os.makedirs(fileName)
+        if not os.path.exists("src/profile"):
+            os.makedirs("src/profile")
         with open(fileName, 'w', encoding='utf-8') as file:
             json.dump(self.profile, file, ensure_ascii=False, indent=4)
 
     def load_profile(self):
         import json
         fileName="src/profile/profile"
-        self.set_zoom_size(1)
+        self.zoom_box.setValue(100)
+        self.font_box.setValue(8)
         if not os.path.exists(fileName):return
 
         with open(fileName, 'r', encoding='utf-8') as file:
@@ -347,6 +349,8 @@ class App(QWidget):
                 self.hotkey_workeds[qtkeys_str] = False
         zoom=self.profile["zoom"]
         self.zoom_box.setValue(int(zoom))
+        fontsize=self.profile["fontsize"]
+        self.font_box.setValue(fontsize)
 
 
     #####--------- HOTKEY----------------
