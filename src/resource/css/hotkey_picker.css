@@ -1,0 +1,31 @@
+/* 热键选择器按钮基础样式 */
+HotkeyPicker, QPushButton.hotkey-picker {
+    background-color: #f0f0f0;
+    border: 1px solid #999999;
+    color: #999999;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+
+/* 热键选择器按钮获取焦点时 */
+HotkeyPicker:focus, QPushButton.hotkey-picker:focus {
+    background-color: #d0d0d0;
+    border: 2px solid #4444ff;
+    outline: none;
+}
+
+/* 信息提示框按钮样式 */
+QMessageBox QPushButton {
+    background-color: #ffffff;
+    border: 0px solid #000000;
+    color: #000000;
+    padding: 5px 10px;
+    border-radius: 2px;
+}
+
+/* 信息提示框按钮获取焦点时 */
+QMessageBox QPushButton:focus {
+    background-color: #ffffff;
+    border: 0px solid #000000;
+    outline: none;
+}

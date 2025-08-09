@@ -73,7 +73,12 @@ class RGBBar(BaseWidget):
     def __init__(self,parent=None):
         super(RGBBar,self).__init__(parent)
 
-        
+        self.metrics = {
+            "RGB":0,
+            "G": 0,
+            # "B\&W": 0,
+
+        }
         self.colorspace = "RGB"
         self.metric = "G"
         self.horizontallayout=QHBoxLayout(self)
@@ -128,7 +133,9 @@ class RGBBar(BaseWidget):
         self.blue.cur.move(QPoint(0,self.bar_height-b/255.0*self.bar_height-self.cursor_height/2.0))
         self.green.cur.move(QPoint(0,self.bar_height-g/255.0*self.bar_height-self.cursor_height/2.0))
         gray=  0.299 *r+ 0.587 *g + 0.114 *b
-        self.pos_value_signal.emit([r,g,b,round(gray)])
+        self.metrics["RGB"]=[round(r), round(g), round(b)]
+        self.metrics["G"] = round(gray)
+        self.pos_value_signal.emit(self.metrics)
 
     def freeze_cursor(self):
         self.red.pos_old2.move(self.red.pos_old2.pos().x(),self.red.pos_old1.pos().y())

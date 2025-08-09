@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -8,6 +9,12 @@ import os
 import datetime
 import argparse
 import textwrap
+
+import numpy as np
+
+from src.Lab import create_lab_proj_cus
+from src.XYZ import create_xyz_proj_cus
+from src.color_utils.color_utils import *
 
 _colorspacesignatures = {
     "XYZ ": "nCIEXYZ or PCSXYZ",
@@ -61,6 +68,23 @@ _renderingintenttable = {
     3: "ICC-absolute colorimetric",
 }
 
+_curvetypetable={
+    0: {
+        "curvetype": "Identity Curve",
+        "function" : "Y =X",
+        "parameters": {}
+    },
+    1: {
+        "curvetype": "Power Function",
+        "function" : "Y =X**g",
+        "parameters": {"g": None}
+    },
+    2: {
+        "curvetype": "Table Curve",
+        "function" : "Y =f(X)",
+        "parameters": {}
+    }
+}
 _parametriccurvetypetable = {
     0: {"function": "Y = X**g", "fieldlength": 4, "parameters": {"g": None}},
     1: {
@@ -248,7 +272,9 @@ class mlucRecord(object):
 
     def __str__(self):
         return "[{}, {}, {}]".format(self._lang, self._country, self._text)
-
+    @property
+    def value(self):
+        return [self._lang, self._country, self._text]
 
 class mlucType(iccProfileElement):
     def __init__(self, offset, length, buffer):
@@ -297,6 +323,13 @@ class mlucType(iccProfileElement):
             self._recordsize,
             ", ".join([str(r) for r in self._records]),
         )
+    @property
+    def value(self):
+        return [(r.value) for r in self._records]
+
+    @property
+    def key(self):
+        return self._typesignature
 
 
 # curveType, identifier "curv"
@@ -312,7 +345,19 @@ class curvType(iccProfileElement):
 
     @property
     def value(self):
-        return self._curve
+
+        func_info = _curvetypetable.get(self._entriescount, _curvetypetable[2])
+        return {
+            "typesignature":self._typesignature,
+            "reserved":self._reserved,
+            "curvetype": "curve",
+            "curvetypename":self._curvetype,
+            "entriescount":self._entriescount,
+            "curve":self._curve,
+            "functiontype":self._entriescount,
+            "function": func_info["function"],
+            "parameters":self._curve,
+        }
 
     @property
     def curvetype(self):
@@ -371,6 +416,153 @@ class curvType(iccProfileElement):
             self._curve,
         )
 
+def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
+    """
+    :param curvetype:  para or curve
+    :param funcid:  0-4 0-2
+    :param parameters:
+    :return:
+    """
+    print("解析中", curvetype, _funcid)
+
+    x=np.linspace(0,1,100)
+    if curvetype=="para":
+        if _funcid == 0:
+            g= float(parameters.get("g", 1))
+            y= np.power(x,g)
+            def degamma_func(x):
+                return np.power(x,g)
+            def gamma_func(x):
+                return np.power(x, 1/g)
+        elif _funcid==1:
+            g= float(parameters.get("g", 1))
+            a= float(parameters.get("a", 1))
+            b= float(parameters.get("b", 0))
+            y= np.power(a*x+b,g)
+            y= np.where(x < -b/a,0,y)
+            def degamma_func(x):
+                return np.where(x< -b/a,0,np.power(a*x+b,g))
+            def gamma_func(x):
+                return np.where(x<0,0,np.power(x,1/g)-b/a)
+        elif _funcid==2:
+
+            g= float(parameters.get("g", 1))
+            a= float(parameters.get("a", 1))
+            b= float(parameters.get("b", 0))
+            c= float(parameters.get("c", 0))
+            y= np.power(a*x+b,g)+c
+            y[x< -b/a]=c
+            def degamma_func(x):
+                return np.where(x< -b/a,c,np.power(a*x+b,g)+c)
+            def gamma_func(x):
+                return np.where(x<0,0,np.power(x,1/g)-b/a+c)
+        elif _funcid==3: # √
+            g= float(parameters.get("g", 1))
+            a= float(parameters.get("a", 1))
+            b= float(parameters.get("b", 0))
+            c= float(parameters.get("c", 0))
+            d= float(parameters.get("d", 0))
+            y= np.power(a*x+b,g)
+            y[x<d]=c*x[x<d]
+            def degamma_func(x):
+                return np.where(x<d,c*x,np.power(a*x+b,g))
+            def gamma_func(x):
+                return np.where(x<c*d,x/c,(np.power(x,1/g)-b)/a )
+
+        elif _funcid==4:
+
+            g= float(parameters.get("g", 1))
+            a= float(parameters.get("a", 1))
+            b= float(parameters.get("b", 0))
+            c= float(parameters.get("c", 0))
+            d= float(parameters.get("d", 0))
+            e= float(parameters.get("e", 0))
+            f= float(parameters.get("f", 0))
+            y= np.power(a*x+b,g)+e
+            y[x<d]=c*x[x<d]+f
+            def degamma_func(x):
+                return np.where(x<d,c*x+f,np.power(a*x+b,g)+e)
+            def gamma_func(x):
+                return np.where(x<0,0,np.power(x,1/g)-b/a+e if x>=d else c*x[x<d]+f)
+    elif curvetype=="curve":
+        if _funcid == 1:#"Power Function":
+            y = numpy.power(x, parameters)
+            def degamma_func(x):
+                return numpy.power(x, parameters)
+            def gamma_func(x):
+                return numpy.power(x, 1/parameters)
+        elif _funcid == 2:#"1D Curve":
+            y = parameters
+            x = np.linspace(0, 1, len(y))
+            def degamma_func(x):
+                return np.interp(x, np.linspace(0, 1, len(y)), y)
+            def gamma_func(x):
+                return np.interp(x, y, np.linspace(0, 1, len(y)))
+        elif _funcid == 0:#"Identity Curve":
+            y = x
+            def degamma_func(x):
+                return x
+            def gamma_func(x):
+                return x
+    y=np.linspace(0,1,100)
+    x=gamma_func(y)
+    return x,y, degamma_func, gamma_func
+
+
+def update_custom_icc(custom_gamut:dict={},skip_lab_proj=False):
+    if not custom_gamut :return
+    White_ILLUMINANTS_xy["CUSTOM"] = custom_gamut["WP xy"][:2]
+    global RGB2XYZ_M_CACHE
+    global Degamma_func_CACHE
+    global Gamma_func_CACHE
+    RGB2XYZ_M_CACHE["CUSTOM"] = custom_gamut["WP RGB2XYZ_matrix"]
+    RGB2XYZ_M_CACHE["CUSTOM-INV"] = custom_gamut["WP XYZ2RGB_matrix"]
+    x,y, degamma_func, gamma_func = get_plot_xy(
+        curvetype=custom_gamut["TRC Type"],
+        _funcid=custom_gamut["TRC FuncID"],
+        parameters=custom_gamut["TRC Parameters"],
+    )
+    Degamma_func_CACHE["CUSTOM"] = degamma_func
+    Gamma_func_CACHE["CUSTOM"] = gamma_func
+    print(RGB2XYZ_M_CACHE["CUSTOM"])
+    print(RGB2XYZ_M_CACHE["CUSTOM-INV"])
+    # generate canvas img
+    # 简易进度条对话框
+    if skip_lab_proj: return
+    from PyQt5.QtWidgets import QDialog, QProgressBar, QVBoxLayout, QLabel, QApplication
+    from PyQt5.QtCore import Qt, QEventLoop, QTimer
+    app = QApplication.instance() or QApplication([])
+    progress_dialog = QDialog()
+    progress_dialog.setWindowFlags(progress_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
+    progress_dialog.setWindowTitle("处理中")
+    progress_dialog.setFixedSize(300, 80)
+    progress_dialog.setWindowModality(Qt.ApplicationModal)
+
+    # 布局和控件
+    layout = QVBoxLayout(progress_dialog)
+    layout.addWidget(QLabel("生成投影图，请稍候..."))
+
+    progress_bar = QProgressBar()
+    progress_bar.setRange(0, 100)
+    progress_bar.setValue(0)
+    layout.addWidget(progress_bar)
+
+    progress_dialog.show()
+    app.processEvents()  # 刷新界面显示
+
+    # 第一个任务
+    progress_bar.setValue(30)
+    app.processEvents()  # 刷新界面显示
+    create_lab_proj_cus(gamut="CUSTOM")
+    # 第二个任务
+    progress_bar.setValue(70)
+    app.processEvents()
+    create_xyz_proj_cus(gamut="CUSTOM")
+    # 完成
+    progress_bar.setValue(100)
+    progress_dialog.close()
+
+
 
 # parametricCurveType, identifier "para"
 class paraType(iccProfileElement):
@@ -386,7 +578,15 @@ class paraType(iccProfileElement):
 
     @property
     def value(self):
-        return self._function
+        return {
+            # "":self._typesignature,
+            # "":self._reserved,
+            "functiontype":self._functiontype,
+            "curvetype":"para",
+            # "":self._reservedsecond,
+            "function":self._function,
+            "parameters":self._parameters,
+        }
 
     @property
     def parameters(self):
@@ -431,6 +631,9 @@ class paraType(iccProfileElement):
             self._function,
             self._parameters,
         )
+
+
+
 
 
 # cmSigVideoCardGammaType, identifier "vcgt"
@@ -567,6 +770,12 @@ class vcgtType(iccProfileElement):
             self._gamma_type,
             self._gamma,
         )
+    def value(self):
+        return [self._typesignature,
+            self._reserved,
+            self._gamma_type,
+            self._gamma]
+
 
 
 # textDescriptionType, identifier "desc"
@@ -631,6 +840,21 @@ class descType(iccProfileElement):
             self._scriptcodecount,
             self._scriptcodedescription,
         )
+    @property
+    def value(self):
+        return self._asciidescription
+        # '["{}", {}, {}, "{}", {}, {}, "{}", {}, {}, "{}"]'.format(
+        #     self._typesignature,
+        #     self._reserved,
+        #     self._asciicount,
+        #     self._asciidescription,
+        #     self._unicodecode,
+        #     self._unicodecount,
+        #     self._unicodedescription,
+        #     self._scriptcodecode,
+        #     self._scriptcodecount,
+        #     self._scriptcodedescription,
+        # ))
 
 
 # textType, identifier "text"
@@ -658,6 +882,9 @@ class textType(iccProfileElement):
             self._reserved,
             textwrap.shorten(self._description, width=256),
         )
+    @property
+    def value(self):
+        return textwrap.shorten(self._description, width=256)
 
 
 class XYZ_Type(iccProfileElement):
@@ -671,6 +898,10 @@ class XYZ_Type(iccProfileElement):
     @property
     def value(self):
         return self._XYZ
+
+    @property
+    def key(self):
+        return self._typesignature
 
     def read(self, buffer):
         try:
@@ -715,6 +946,9 @@ class sf32Type(iccProfileElement):
     def value(self):
         return self._sf32
 
+    @property
+    def key(self):
+        return self._typesignature
     def read(self, buffer):
         try:
             sf32typebuffer = buffer[self._slice]
@@ -742,15 +976,17 @@ class sf32Type(iccProfileElement):
             self._typesignature, self._reserved, sf32string
         )
 
-
 class iccProfileSize(iccProfileElement):
     def __init__(self):
         super(iccProfileSize, self).__init__(0, 4)
         self._profilesize = None
 
     @property
-    def profilesize(self):
+    def value(self):
         return self._profilesize
+    @property
+    def key(self):
+        return "Profile Size"
 
     def read(self, buffer):
         try:
@@ -791,7 +1027,9 @@ class iccPreferredCMMType(iccProfileElement):
     @property
     def preferredcmmtype(self):
         return self._preferredcmmtype
-
+    @property
+    def value(self):
+        return self._preferredcmmtype
     def __repr__(self):
         return "<class '{0}({1}, preferredcmmtype('{2}'))'>".format(
             self.__class__.__name__, self._slice, self._preferredcmmtype
@@ -854,6 +1092,9 @@ class iccProfileVersion(iccProfileElement):
             str(self._minorVersion),
             str(self._bugFixVersion),
         )
+    @property
+    def value(self):
+        return "{}.{}.{}".format(self._majorVersion, self._minorVersion, self._bugFixVersion)
 
 
 class iccProfileDeviceClass(iccProfileElement):
@@ -900,6 +1141,14 @@ class iccProfileDeviceClass(iccProfileElement):
             str(self._profiledeviceclass),
             str(self._profiledeviceclassdescription),
         )
+    @property
+    def value(self):
+        device_classes = {'scnr': 'Scanner', 'mntr': 'Monitor', 'prtr': 'Printer'}
+        device_type = device_classes.get(self._profiledeviceclass, 'Unknown')
+        return [ str(self._profiledeviceclass),
+                str(self._profiledeviceclassdescription),
+                 device_type]
+
 
 
 class iccDataColorSpace(iccProfileElement):
@@ -946,6 +1195,10 @@ class iccDataColorSpace(iccProfileElement):
             str(self._datacolorspace),
             str(self._datacolorspacedescription),
         )
+    @property
+    def value(self):
+        return [str(self._datacolorspace), str(self._datacolorspacedescription)]
+
 
 
 class iccPCS(iccProfileElement):
@@ -983,6 +1236,10 @@ class iccPCS(iccProfileElement):
         return '{:>30}{:5}"{:<}", "{}"'.format(
             "Profile PCS:", "", str(self._pcs), str(self._pcsdescription)
         )
+
+    @property
+    def value(self):
+        return '{:<}", "{}"'.format(str(self._pcs), str(self._pcsdescription))
 
 
 class iccDateTimeNumber(iccProfileElement):
@@ -1023,6 +1280,10 @@ class iccDateTimeNumber(iccProfileElement):
             "Date and Time Created:", "", str(self._datetime)
         )
 
+    @property
+    def value(self):
+        return self._datetime
+
 
 class iccProfileFileSignature(iccProfileElement):
     def __init__(self):
@@ -1052,6 +1313,10 @@ class iccProfileFileSignature(iccProfileElement):
         return "<class '{0}({1}, profilefilesignature({2}))'>".format(
             self.__class__.__name__, self._slice, self._profilefilesignature
         )
+
+    @property
+    def value(self):
+        return self._profilefilesignature
 
     def __str__(self):
         return '{:>30}{:5}"{:<}"'.format(
@@ -1096,6 +1361,9 @@ class iccPrimaryPlatform(iccProfileElement):
             self._primaryplatformdescription,
         )
 
+    @property
+    def value(self):
+        return self._primaryplatform
     def __str__(self):
         return '{:>30}{:5}"{:<}", "{}"'.format(
             "Primary Platform:",
@@ -1136,6 +1404,9 @@ class iccProfileFlags(iccProfileElement):
             "Profile Flags:", "", str(self._profileflags)
         )
 
+    @property
+    def value(self):
+        return self._profileflags
 
 class iccDeviceManufacturer(iccProfileElement):
     def __init__(self):
@@ -1168,6 +1439,9 @@ class iccDeviceManufacturer(iccProfileElement):
             "Device Manufacturer:", "", str(self._devicemanufacturer)
         )
 
+    @property
+    def value(self):
+        return self._devicemanufacturer
 
 class iccDeviceModel(iccProfileElement):
     def __init__(self):
@@ -1196,7 +1470,46 @@ class iccDeviceModel(iccProfileElement):
             "Device Model:", "", str(self._devicemodel)
         )
 
+    @property
+    def value(self):
+        return self._devicemodel
 
+class iccPCSIlluminant(iccProfileElement):
+    def __init__(self):
+        super(iccPCSIlluminant, self).__init__(68, 12)
+        self._pcsilluminant = XYZNumber()
+
+    @property
+    def pcsilluminant(self):
+        return self._pcsilluminant
+
+    def read(self, buffer):
+        try:
+            pcsilluminantxyzbuffer = buffer[self._slice]
+            self._pcsilluminant.read(pcsilluminantxyzbuffer)
+
+        except Exception as e:
+            raise ICCFileError(
+                "Error parsing PCS illuminant: {}".format(str(e))
+            )
+
+    def __repr__(self):
+        return "<class '{0}({1}, pcsilluminant({2}))'>".format(
+            self.__class__.__name__, self._slice, repr(self._pcsilluminant)
+        )
+
+    def __str__(self):
+        return "{:>30}{:5}{:<}".format(
+            "PCS Illuminant:", "", str(self._pcsilluminant)
+        )
+
+    @property
+    def value(self):
+        return [self._pcsilluminant.XYZ, self._pcsilluminant.xyY]
+
+    @property
+    def key(self):
+        return "PCS Illuminant"
 class iccDeviceAttributes(iccProfileElement):
     def __init__(self):
         super(iccDeviceAttributes, self).__init__(56, 8)
@@ -1228,82 +1541,147 @@ class iccDeviceAttributes(iccProfileElement):
             "Device Attributes:", "", self._deviceattributes
         )
 
+    @property
+    def value(self):
+        return self._deviceattributes
 
-class iccRenderingIntent(iccProfileElement):
+
+
+class iccProfile:
     def __init__(self):
-        super(iccRenderingIntent, self).__init__(64, 4)
-        self._renderingintent = None
-        self._renderingintentdescription = None
+        self._profilesize = iccProfileSize()
+        self._preferredcmmtype = iccPreferredCMMType()
+        self._profileversion = iccProfileVersion()
+        self._profiledeviceclass = iccProfileDeviceClass()
+        self._datacolorspace = iccDataColorSpace()
+        self._pcs = iccPCS()
+        self._datetimenumber = iccDateTimeNumber()
+        self._profilefilesignature = iccProfileFileSignature()
+        self._primaryplatform = iccPrimaryPlatform()
+        self._profileflags = iccProfileFlags()
+        self._devicemanufacturer = iccDeviceManufacturer()
+        self._devicemodel = iccDeviceModel()
+        self._deviceattributes = iccDeviceAttributes()
+        self._renderingintent = iccRenderingIntent()
+        self._pcsilluminant = iccPCSIlluminant()
+        self._profilecreator = iccProfileCreator()
+        self._profileid = iccProfileID()
+        self._reserved = iccReserved()
+        self._tagtable = iccTagTable()
 
     @property
-    def renderingintent(self):
-        return self._renderingintent
-
-    @property
-    def renderinintentdescription(self):
-        return self._renderingintentdescription
+    def tags(self):
+        return self._tagtable.tags
 
     def read(self, buffer):
-        try:
-            renderingintentbuffer = buffer[self._slice]
-            self._renderingintent = unpack_uInt32Number(
-                renderingintentbuffer[0:4]
-            )
-            self._renderingintentdescription = _renderingintenttable[
-                self._renderingintent
-            ]
-
-        except Exception as e:
-            raise ICCFileError(
-                "Error parsing rendering intent: {}".format(str(e))
-            )
-
-    def __repr__(self):
-        return "<class '{0}({1}, renderingintent({2}, '{3}'))'>".format(
-            self.__class__.__name__,
-            self._slice,
-            self._renderingintent,
-            self._renderingintentdescription,
-        )
+        for _, var in vars(self).items():
+            try:
+                var.read(buffer)
+            except Exception as e:
+                print("Skip {}: {}".format(type(var).__name__, str(e)))
+                continue
 
     def __str__(self):
-        return '{:>30}{:5}{:<}, "{}"'.format(
-            "Profile PCS:",
-            "",
-            self._renderingintent,
-            str(self._renderingintentdescription),
-        )
+        string = ""
+        append = False
 
+        for _, var in vars(self).items():
+            if append is True:
+                string += "\n"
+            else:
+                append = True
 
-class iccPCSIlluminant(iccProfileElement):
-    def __init__(self):
-        super(iccPCSIlluminant, self).__init__(68, 12)
-        self._pcsilluminant = XYZNumber()
+            string += str(var)
+        return string
 
-    @property
-    def pcsilluminant(self):
-        return self._pcsilluminant
+    ##--CUSTOM FUNC
+    def get_info(self):
+        ddict = {}
 
-    def read(self, buffer):
-        try:
-            pcsilluminantxyzbuffer = buffer[self._slice]
-            self._pcsilluminant.read(pcsilluminantxyzbuffer)
+        for _, var in vars(self).items():
+            ddict[var.__class__.__name__[3:]]= var.value
+        device_classes = {'scnr': 'Scanner', 'mntr': 'Monitor', 'prtr': 'Printer'}
+        if "ProfileDeviceClass" in ddict:
+            if ddict["ProfileDeviceClass"][0] in ["scnr", "mntr"]:
+                WP_Illuminant,WP_XYZ,WP_xyY,WP_RGB2XYZ_matix,WP_XYZ2RGB_matrix=self.get_WP(ddict)
+                ddict["WP_Illuminant"] = WP_Illuminant
+                ddict["WP_XYZ"] = WP_XYZ
+                ddict["WP_xyY"] = WP_xyY
+                ddict["WP_RGB2XYZ_matix"]=WP_RGB2XYZ_matix
+                ddict["WP_XYZ2RGB_matrix"]=WP_XYZ2RGB_matrix
+                ddict["PCS_XYZ"] = ddict["PCSIlluminant"][0]
+                ddict["PCS_xyY"] = ddict["PCSIlluminant"][1]
+                ddict["PCS_Illuminant"] = get_near_illuminant(ddict["PCSIlluminant"][1][:2])
+                curvetype=ddict["TagTable"]["rTRC"][1]["curvetype"]
+                funcid=ddict["TagTable"]["rTRC"][1]["functiontype"]
+                parameters=ddict["TagTable"]["rTRC"][1]["parameters"]
+                x,y,degamma_func,gamma_func=get_plot_xy(curvetype,funcid,parameters)
+                ddict["TRC"]={
+                    "curvetype": curvetype,
+                    "funcid": funcid,
+                    "xy": [x,y]  ,
+                     "function": ddict["TagTable"]["rTRC"][1]["function"],
+                    "parameters":ddict["TagTable"]["rTRC"][1]["parameters"],
+                }
 
-        except Exception as e:
-            raise ICCFileError(
-                "Error parsing PCS illuminant: {}".format(str(e))
+        return ddict
+    def get_WP(self,ddict):
+        if "wtpt" in ddict["TagTable"]:
+            wXYZ=ddict["TagTable"]["wtpt"][1][0]
+        if "PCSIlluminant" in ddict:
+            illuminant_XYZ = ddict["PCSIlluminant"][0]
+        if "chad" in ddict["TagTable"]: # WPXYZ to PCSXYZ
+            chad=ddict["TagTable"]["chad"][1].reshape(3,3)
+        else:
+            chad=get_color_XYZ_CA_Matrix(wXYZ,illuminant_XYZ)
+        if "rXYZ" in ddict["TagTable"]:
+            rXYZ = ddict["TagTable"]["rXYZ"][1][0]
+        if "gXYZ" in ddict["TagTable"]:
+            gXYZ = ddict["TagTable"]["gXYZ"][1][0]
+        if "bXYZ" in ddict["TagTable"]:
+            bXYZ = ddict["TagTable"]["bXYZ"][1][0]
+        PCS_RGB2XYZ_matix= numpy.transpose( # PCS D50 to XYZ
+                [
+                    rXYZ,
+                    gXYZ,
+                    bXYZ
+                ]
             )
 
-    def __repr__(self):
-        return "<class '{0}({1}, pcsilluminant({2}))'>".format(
-            self.__class__.__name__, self._slice, repr(self._pcsilluminant)
+        WP_RGB2XYZ_matix = numpy.matmul( # WP  to XYZ
+            numpy.linalg.inv(chad),
+            PCS_RGB2XYZ_matix
         )
 
-    def __str__(self):
-        return "{:>30}{:5}{:<}".format(
-            "PCS Illuminant:", "", str(self._pcsilluminant)
-        )
 
+        method = "BFD"
+        M = CAM_dict[method]
+
+        M_inv = np.linalg.inv(M)
+        W_XYZ_from_cone = np.dot(M, illuminant_XYZ)
+        scale = np.dot(M, np.dot(chad, M_inv))
+        scale = np.array([
+            scale[0, 0],
+            scale[1, 1],
+            scale[2, 2]
+        ])
+
+        W_XYZ_to_cone = W_XYZ_from_cone / scale
+        W_XYZ_to = np.dot(M_inv, W_XYZ_to_cone)
+        W_xyY_to = color_XYZ_to_xyY(W_XYZ_to)
+
+
+        # get illuminant name
+        WP_Illuminant=None
+        min_dis=1
+        WP_Illuminant= get_near_illuminant(W_xyY_to[:2])
+
+
+        WP_XYZ2RGB_matrix= numpy.linalg.inv(WP_RGB2XYZ_matix)
+
+
+
+        return WP_Illuminant,W_XYZ_to,W_xyY_to,WP_RGB2XYZ_matix,WP_XYZ2RGB_matrix
 
 class iccProfileCreator(iccProfileElement):
     def __init__(self):
@@ -1335,6 +1713,81 @@ class iccProfileCreator(iccProfileElement):
         return '{:>30}{:5}"{:<}"'.format(
             "Profile Creator:", "", str(self._profilecreator)
         )
+    @property
+    def value(self):
+        return self._profilecreator
+
+
+class iccTag(iccProfileElement):
+    def __init__(self, offset):
+        super(iccTag, self).__init__(offset, 12)
+        self._tagsignature = None
+        self._tagoffset = None
+        self._tagsize = None
+        self._infos = None
+
+    @property
+    def signature(self):
+        return self._tagsignature
+
+    @property
+    def infos(self):
+        return self._infos
+
+    def read(self, buffer):
+        try:
+            tagbuffer = buffer[self._slice]
+            self._tagsignature = unpack_tagSignature(tagbuffer[0:4])
+            self._tagoffset = unpack_uInt32Number(tagbuffer[4:8])
+            self._tagsize = unpack_uInt32Number(tagbuffer[8:12])
+
+            try:
+                signaturetype = unpack_tagSignature(
+                    buffer[self._tagoffset : self._tagoffset + 4]
+                )
+
+                signaturetype = signaturetype.replace(" ", "_")
+                signatureclass = getattr(
+                    sys.modules[__name__], "{}Type".format(signaturetype)
+                )
+
+                self._infos = signatureclass(
+                    self._tagoffset, self._tagsize, buffer
+                )
+
+            except AttributeError:
+                pass
+
+        except Exception as e:
+            raise ICCFileError(
+                "Error reading tag signature: {}".format(str(e))
+            )
+
+    def __repr__(self):
+        return "<class '{0}({1}, tag('{2}'))'>".format(
+            self.__class__.__name__, self._slice, self._tagsignature
+        )
+
+    def __str__(self):
+        return "{} Offset: {} Size: {} {}".format(
+            "{:<8}".format('"' + str(self._tagsignature) + '",'),
+            "{:<8}".format(str(self._tagoffset) + ","),
+            "{:<8}".format(str(self._tagsize) + ","),
+            str(self._infos),
+        )
+    @property
+    def value(self):
+        if isinstance(self._infos,XYZ_Type):
+            infos_XYZNumber=self._infos._XYZ[0]
+            return [str(self._infos._typesignature),[infos_XYZNumber.XYZ, infos_XYZNumber.xyY]]
+        elif self._infos is None:
+            return [str(self._tagsignature),None]
+        return [str(self._infos._typesignature),self._infos.value]
+
+
+    @property
+    def key(self):
+        return self._tagsignature
 
 
 class iccProfileID(iccProfileElement):
@@ -1366,7 +1819,10 @@ class iccProfileID(iccProfileElement):
         return "{:>30}{:5}{:<}".format(
             "Profile ID:", "", str(self._profileid.hex())
         )
-
+    @property
+    def value(self):
+        return "{:<}".format(str(self._profileid.hex())
+        )
 
 class iccReserved(iccProfileElement):
     def __init__(self):
@@ -1395,66 +1851,10 @@ class iccReserved(iccProfileElement):
         return "{:>30}{:5}{:<}".format(
             "Reserved:", "", str(self._reserved.hex())
         )
-
-
-class iccTag(iccProfileElement):
-    def __init__(self, offset):
-        super(iccTag, self).__init__(offset, 12)
-        self._tagsignature = None
-        self._tagoffset = None
-        self._tagsize = None
-        self._type = None
-
     @property
-    def signature(self):
-        return self._tagsignature
-
-    @property
-    def type(self):
-        return self._type
-
-    def read(self, buffer):
-        try:
-            tagbuffer = buffer[self._slice]
-            self._tagsignature = unpack_tagSignature(tagbuffer[0:4])
-            self._tagoffset = unpack_uInt32Number(tagbuffer[4:8])
-            self._tagsize = unpack_uInt32Number(tagbuffer[8:12])
-
-            try:
-                signaturetype = unpack_tagSignature(
-                    buffer[self._tagoffset : self._tagoffset + 4]
-                )
-
-                signaturetype = signaturetype.replace(" ", "_")
-                signatureclass = getattr(
-                    sys.modules[__name__], "{}Type".format(signaturetype)
-                )
-
-                self._type = signatureclass(
-                    self._tagoffset, self._tagsize, buffer
-                )
-
-            except AttributeError:
-                pass
-
-        except Exception as e:
-            raise ICCFileError(
-                "Error reading tag signature: {}".format(str(e))
-            )
-
-    def __repr__(self):
-        return "<class '{0}({1}, tag('{2}'))'>".format(
-            self.__class__.__name__, self._slice, self._tagsignature
+    def value(self):
+        return "{:<}".format(str(self._reserved.hex())
         )
-
-    def __str__(self):
-        return "{} Offset: {} Size: {} {}".format(
-            "{:<8}".format('"' + str(self._tagsignature) + '",'),
-            "{:<8}".format(str(self._tagoffset) + ","),
-            "{:<8}".format(str(self._tagsize) + ","),
-            str(self._type),
-        )
-
 
 class iccTagTable(iccProfileElement):
     def __init__(self):
@@ -1507,62 +1907,101 @@ class iccTagTable(iccProfileElement):
             "",
             tagstring,
         )
-
-
-class iccProfile:
+    @property
+    def value(self):
+        tagddict={}
+        for index, tag in numpy.ndenumerate(self._tags):
+            tag=tag[1]
+            tagddict[tag._tagsignature]=tag.value
+        return tagddict
+class iccRenderingIntent(iccProfileElement):
     def __init__(self):
-        self._profilesize = iccProfileSize()
-        self._preferredcmmtype = iccPreferredCMMType()
-        self._profileversion = iccProfileVersion()
-        self._profiledeviceclass = iccProfileDeviceClass()
-        self._datacolorspace = iccDataColorSpace()
-        self._pcs = iccPCS()
-        self._datetimenumber = iccDateTimeNumber()
-        self._profilefilesignature = iccProfileFileSignature()
-        self._primaryplatform = iccPrimaryPlatform()
-        self._profileflags = iccProfileFlags()
-        self._devicemanufacturer = iccDeviceManufacturer()
-        self._devicemodel = iccDeviceModel()
-        self._deviceattributes = iccDeviceAttributes()
-        self._renderingintent = iccRenderingIntent()
-        self._pcsilluminant = iccPCSIlluminant()
-        self._profilecreator = iccProfileCreator()
-        self._profileid = iccProfileID()
-        self._reserved = iccReserved()
-        self._tagtable = iccTagTable()
+        super(iccRenderingIntent, self).__init__(64, 4)
+        self._renderingintent = None
+        self._renderingintentdescription = None
 
     @property
-    def tags(self):
-        return self._tagtable.tags
+    def renderingintent(self):
+        return self._renderingintent
+
+    @property
+    def renderinintentdescription(self):
+        return self._renderingintentdescription
 
     def read(self, buffer):
-        for _, var in vars(self).items():
-            try:
-                var.read(buffer)
-            except Exception as e:
-                print("Skip {}: {}".format(type(var).__name__, str(e)))
-                continue
+        try:
+            renderingintentbuffer = buffer[self._slice]
+            self._renderingintent = unpack_uInt32Number(
+                renderingintentbuffer[0:4]
+            )
+            self._renderingintentdescription = _renderingintenttable[
+                self._renderingintent
+            ]
+
+        except Exception as e:
+            raise ICCFileError(
+                "Error parsing rendering intent: {}".format(str(e))
+            )
+
+    def __repr__(self):
+        return "<class '{0}({1}, renderingintent({2}, '{3}'))'>".format(
+            self.__class__.__name__,
+            self._slice,
+            self._renderingintent,
+            self._renderingintentdescription,
+        )
 
     def __str__(self):
-        string = ""
-        append = False
+        return '{:>30}{:5}{:<}, "{}"'.format(
+            "Profile PCS:",
+            "",
+            self._renderingintent,
+            str(self._renderingintentdescription),
+        )
 
-        for _, var in vars(self).items():
-            if append is True:
-                string += "\n"
-            else:
-                append = True
+    @property
+    def value(self):
+        return '{},{}'.format(
+            self._renderingintent,
+            str(self._renderingintentdescription),
+        )
+    @property
+    def key(self):
+        return "Profile PCS"
+def get_near_illuminant(xy_value):
+    WP_Illuminant=None
+    min_dis=1
+    for illuminant,illuminant_xy in White_ILLUMINANTS_xy.items():
+        dis=np.linalg.norm(xy_value-illuminant_xy)
+        if dis<min_dis:
+            min_dis=dis
+            WP_Illuminant=illuminant
+    if WP_Illuminant is  not None:
+        WP_Illuminant = "Near "+WP_Illuminant
+    return WP_Illuminant
 
-            string += str(var)
-        return string
-
+def show_result(result, space=0):
+    for k, v in result.items():
+        if isinstance(v, dict):
+            print("  " * space, k, ":")
+            show_result(v, space + 1)
+        elif isinstance(v, list):
+            print("  " * space, k, ":", v)
+        else:
+            print("  " * space, k, ":", v)
 
 if __name__ == "__main__":
     try:
         parser = argparse.ArgumentParser(prog="iccinspector")
         parser.add_argument("iccfile",
                             nargs="?", type=argparse.FileType("rb"),
-                            default="DCI-P3-D65.icc")
+                            default=r"profiles/Display P3.css")
+        # parser.add_argument("iccfile",
+        #                     nargs="?", type=argparse.FileType("rb"),
+        #                     default=r"profiles/AdobeRGB1998.css")
+        # parser.add_argument("iccfile",
+        #                     nargs="?", type=argparse.FileType("rb"),
+        #                     default=r"F:\code\HoverColor\src\color_utils\profiles\JapanColor2001Coated.css")
         parser.add_argument(
             "-t",
             dest="tagsignature",
@@ -1581,10 +2020,11 @@ if __name__ == "__main__":
 
         with args.iccfile as f:
             s = memoryview(f.read())
-
             testField = iccProfile()
             testField.read(s)
             print(testField)
+            ddict = testField.get_info()
+            show_result(ddict)
 
             # for tagsignature in args.tagsignature:
             #     print(
@@ -1597,7 +2037,7 @@ if __name__ == "__main__":
         if args.extract_lut:
             for (signature, tag) in testField.tags:
                 try:
-                    tag.type.extract_lut(signature)
+                    tag.infos.extract_lut(signature)
                 except Exception:
                     continue
 

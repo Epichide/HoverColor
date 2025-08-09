@@ -7,14 +7,14 @@
 # @Software: PyCharm
 import numpy as np
 from PyQt5 import  QtCore, QtGui
-from PyQt5.QtGui import QCursor, QImage, QPixmap, QScreen
-from PyQt5.QtWidgets import QApplication, QBoxLayout, QFrame, QHBoxLayout, QLabel, QWidget
-from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
+from PyQt5.QtGui import QCursor
+from PyQt5.QtWidgets import QApplication, QHBoxLayout, QLabel, QWidget
+from PyQt5.QtCore import  Qt, QPoint,pyqtSignal,QTimer
 
-from src.pyqt_screenshot import constant
-from src.pyqt_screenshot.screenshot import Screenshot
+from src.wid_utils.pyqt_screenshot import constant
+from src.wid_utils.pyqt_screenshot.screenshot import Screenshot
 
-from .hotkeys_utils.response_key import GLOBAL_PRESS
+
 class Screenshoot(QWidget):
     cursor_moved = pyqtSignal(object)
     def __init__(self,*args,**kwargs):

@@ -3,7 +3,7 @@
 # @Author: Epichide
 # @Email: no email
 # @Time: 2025/8/6 20:13
-# @File: icc.py
+# @File: css.py
 # @Software: PyCharm
 import io
 
@@ -73,32 +73,32 @@ def show_icc(prf: ImageCms.ImageCmsProfile):
     return info_dict
 
 def load_icc(icc_path):
-    if icc_path.endswith('.icc') or icc_path.endswith('.icm') :
+    if icc_path.endswith('.css') or icc_path.endswith('.icm') :
         prf = ImageCms.getOpenProfile(icc_path)
     else:
         image = Image.open(icc_path)
         icc = image.info.get('icc_profile')
         f = io.BytesIO(icc)
         prf = ImageCms.ImageCmsProfile(f)
-    # save icc profile
+    # save css profile
     bb=prf.tobytes()
-    with open("extracted.icc","wb") as f:
+    with open("profiles/extracted.icc", "wb") as f:
         f.write(bb)
     return prf
 
 if __name__ == '__main__':
     # imgi=imread("glossy.png")
     # # Creating sRGB profile
-    # prf = ImageCms.getOpenProfile(r"Display P3.icc")
+    # prf = ImageCms.getOpenProfile(r"Display P3.css")
     # img = Image.fromarray(imgi)
     # img.save("dispalyP3.jpg", icc_profile=profile.tobytes())
-    # profile = ImageCms.getOpenProfile(r"E:\code\15-flashlight\huawei.icc")
+    # profile = ImageCms.getOpenProfile(r"E:\code\15-flashlight\huawei.css")
     # img = Image.fromarray(imgi)
     # img.save("huawei.jpg", icc_profile=profile.tobytes())
     # image = Image.open("huawei.jpg")
-    # icc = image.info.get('icc_profile')
-    # f = io.BytesIO(icc)
+    # css = image.info.get('icc_profile')
+    # f = io.BytesIO(css)
     # prf = ImageCms.ImageCmsProfile(f)
-    prf=load_icc(r"ip16-IMG_0122.JPG")
+    prf=load_icc(r"profiles/ip16-IMG_0122.JPG")
     show_icc(prf)
     print(prf.profile.__dir__())

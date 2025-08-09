@@ -16,12 +16,13 @@ from PyQt5.QtGui import QCloseEvent, QColor, QIcon, QImage, QMouseEvent, QCursor
 from PyQt5.QtWidgets import  (QWidget,QHBoxLayout,QFrame,QLabel,
                               QApplication,QMenu,QAction,QMessageBox)
 
-from .color_utils.color_utils import color_HSV_to_RGB, color_RGB_to_HSV
 
 try:
+    from .color_utils.color_utils import color_HSV_to_RGB, color_RGB_to_HSV
     from .basepanel import  BaseWidget
 except:
     from basepanel import  BaseWidget
+    from color_utils.color_utils import color_HSV_to_RGB, color_RGB_to_HSV
 
 class HueChart(BaseWidget):
     def set_zoom_size(self, ratio=1):
@@ -116,6 +117,9 @@ class HueChart(BaseWidget):
     def __init__(self,parent=None,mode="hsv",gamut="P3-D65"):
         super().__init__(parent)
         self.colorspace = "HSV"
+        self.metrics ={
+            "HSV":0,
+        }
         self.metric = ""
         self.gamut=gamut
         self.hue=QLabel(self)
@@ -205,7 +209,8 @@ class HueChart(BaseWidget):
         s = min(255, s * 255)
         color_string = ",".join([str(r), str(g), str(b)])
         # self.hue_cur.setStyleSheet("background-color: rgb(" + color_string + ");")
-        self.pos_value_signal.emit([h,s,v])
+        self.metrics["HSV"]= [round(h, 2), round(s, 2), round(v, 2)]
+        self.pos_value_signal.emit(self.metrics)
         return h,s,v
     def add_pos_hue_widget(self,wid,tex=""):
         pos_wid=QLabel(wid)

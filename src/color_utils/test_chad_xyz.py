@@ -21,7 +21,7 @@ if __name__ == "__main__":
             "iccfile",
             type=argparse.FileType("rb"),
             nargs="?",
-        default = "Display P3.icc"
+        default = "Display P3.css"
         )
 
         args = parser.parse_args()

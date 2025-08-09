@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QWidget, QPushButton, QHBoxLayout, QFrame, QButtonGr
 from .constant import *
 from PyQt5.QtCore import pyqtSignal, Qt
 
-from ..resource import resource
+from src.resource import resource
 
 
 class PenSetWidget(QWidget):

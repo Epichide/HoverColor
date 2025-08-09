@@ -40,6 +40,10 @@ class XYZChart(HueChart):
         self.XYZ_1 = None
         self.XYZ_2 = None
         self.colorspace = "XYZ"
+        self.metrics={
+            "XYZ":0,
+            # "xyY":0
+        }
         self.metric = ""
         self.gamut= gamut
 
@@ -85,7 +89,8 @@ class XYZChart(HueChart):
         color_string = ",".join([str(r), str(g), str(b),str(1)])
         self.hue_cur.setStyleSheet("border-width: 1px;\n")
         self.XYZ_2=[X,Y,Z]
-        self.pos_value_signal.emit([X,Y,Z,0])
+        self.metrics["XYZ"]=[round(X,4), round(Y,4), round(Z,4)]
+        self.pos_value_signal.emit(self.metrics)
         return X,Y,Z
 
 
@@ -95,7 +100,9 @@ def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
     import pandas as pd
     from skimage import io
     from skimage.draw import line
-    import skimage
+    def _get_file(relative_path):
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), relative_path))
+
     # RGB Rectangle
     y_max = int(nsize / 0.85)
     x_max = int(nsize / 0.75)
@@ -122,7 +129,7 @@ def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
 
     # load CIE xyz CMF curve
 
-    xyz_cc = pd.read_csv('./resource/CIEdata/cie_1931_2deg_xyz_cc.csv', index_col=0)
+    xyz_cc = pd.read_csv(_get_file('./resource/CIEdata/cie_1931_2deg_xyz_cc.csv'), index_col=0)
     xy = xyz_cc[['x', 'y']]
     r, c = xy["x"].values, xy["y"].values
     r = np.int16(np.round(r * x_max))
@@ -149,7 +156,7 @@ def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
     # plt.imshow(img)
     # plt.show()
 
-    outfile=os.path.join("resource","XYZ",f"CIE_1931_chromaticity_diagram_{gamut}.png")
+    outfile=_get_file(os.path.join("resource","XYZ",f"CIE_1931_chromaticity_diagram_{gamut}.png"))
     io.imsave(outfile,img)
 
 if __name__ == '__main__':

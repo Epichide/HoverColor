@@ -12,7 +12,31 @@
 # from colour.models import xy_to_XYZ, xy_to_xyY, xyY_to_XYZ
 import numpy as np
 # from colour.models.rgb import RGB_COLOURSPACES, RGB_to_XYZ, XYZ_to_RGB
+RGB2XYZ_M_CACHE={
+    "CUSTOM":np.array([[ 0.4866,  0.2657 , 0.1982],
+     [ 0.229 ,  0.6917 , 0.0793],
+     [-0.    ,  0.0451,  1.0439]]),
 
+    "CUSTOM-INV":np.array([[ 2.4935 ,-0.9314,-0.4027],
+                     [-0.8295 , 1.7627  ,0.0236],
+                     [ 0.0359 ,-0.0762 , 0.9569]])
+}
+def degamma_func(x):
+    a,b,c,d,g=[0.9478607177734375, 0.0521392822265625, 0.077392578125, 0.039276123046875, 2.399993896484375]
+    return np.where(x < d, c * x, np.power(a * x + b, g))
+
+def gamma_func(x):
+    a,b,c,d,g=[0.9478607177734375, 0.0521392822265625, 0.077392578125, 0.039276123046875, 2.399993896484375]
+    return np.where(x < c * d, x / c, (np.power(x, 1 / g) - b) / a)
+Degamma_func_CACHE={
+    "CUSTOM":degamma_func
+
+}
+
+Gamma_func_CACHE={
+
+"CUSTOM":gamma_func
+}
 #
 # White_ILLUMINANTS_XYZ={
 #      "A":[1.0985,1,0.35585],
@@ -61,6 +85,7 @@ White_ILLUMINANTS_xy={
     "LED-RGB1":[0.4557,0.4211],
     "LED-V1":[0.456,0.4548],
     "LED-V2":[0.3781,0.3775],
+    "CUSTOM":[0.31269811, 0.3289997]
 }
 
 RGB_xy={
@@ -110,6 +135,7 @@ Gmaut_Illuminant={
     "Rec.2020":"D65",
     "P3-D60":"D60",#P3-D60 (ACES Cinema)
     "AdobeRGB":"D65",
+    "CUSTOM":"CUSTOM"
 }
 CAM_dict={
         "HPE-Eq" : np.array([
@@ -223,7 +249,9 @@ def white_xy2XYZ(xy,panel=1.0):
 
 
 def get_white_point_XYZ(illuminant="D65"):
-    if illuminant=="E":
+    if not isinstance(illuminant,str):
+        white_XYZ=illuminant
+    elif illuminant=="E":
         white_XYZ= [1.0,1.0,1.0]
     else:
         white_xy=White_ILLUMINANTS_xy[illuminant]
@@ -246,12 +274,12 @@ def get_RGB_xyz(gamut="sRGB"):
     rgb_xyz=np.vstack([rgb_xy,rgb_z])
     return rgb_xyz
 
-RGB2XYZ_M_CACHE={}
+
 def get_RGB2XYZ_M(gamut="sRGB"):
-    assert  gamut in RGB_xy, gamut+" gamut is not support"
     global RGB2XYZ_M_CACHE
     if gamut in RGB2XYZ_M_CACHE:
         return RGB2XYZ_M_CACHE[gamut]
+    assert  gamut in RGB_xy, gamut+" gamut is not support"
     rgb_xyz=get_RGB_xyz(gamut)
     rgb_xyz_inv=np.matrix(rgb_xyz).I
     W_XYZ=np.array(get_white_point_XYZ(Gmaut_Illuminant[gamut])).T
@@ -296,6 +324,7 @@ def compare_RGB2XYZ_M():
 
 #------- linear RGB - RGB -----------
 #------------------------------------
+
 def color_RGB_to_linearRGB(RGB,gamut="sRGB"):
     """
     ref : https://entropymine.com/imageworsener/srgbformula/
@@ -304,7 +333,11 @@ def color_RGB_to_linearRGB(RGB,gamut="sRGB"):
     :return:
     """
     RGB=range01(RGB)
-    if gamut in ["sRGB","P3-D65"]:
+    if gamut in Degamma_func_CACHE:
+        func = Degamma_func_CACHE[gamut]
+        linearRGB = func(RGB)
+        return linearRGB
+    elif gamut in ["sRGB","P3-D65"]:
         linearRGB=np.where(RGB<0.040448,RGB/12.92,((RGB+0.055)/1.055)**2.4)
     elif gamut in ["AdobeRGB"]:
         linearRGB = np.where(RGB < 0.0556, RGB / 32, RGB**2.2)
@@ -330,8 +363,13 @@ def plot_gamma_curve():
     plt.plot(RGB, linearRGB)
     plt.show()
 
+
 def color_linearRGB_to_RGB(linearRGB,gamut="sRGB"):
-    if gamut in ["sRGB", "P3-D65"]:
+    if gamut in Gamma_func_CACHE:
+        func = Gamma_func_CACHE[gamut]
+        RGB = func(linearRGB)
+        return RGB
+    elif gamut in ["sRGB", "P3-D65"]:
         RGB=np.where(linearRGB<0.00313,linearRGB*12.92,1.055*linearRGB**(1/2.4)-0.055)
     elif gamut in ["AdobeRGB"]:
         RGB=np.where(linearRGB<0.00174,linearRGB*32,linearRGB**(1/2.2))
@@ -404,7 +442,7 @@ def get_color_XYZ_CA_Matrix(fromIlluminant="D65",toIlluminant="D65",method="BFD"
     :param method: The chromatic adaptation method (e.g., "BFD", "CAT02", etc.).
     :return: The chromatic adaptation matrix.
     """
-    if fromIlluminant == toIlluminant:
+    if isinstance(fromIlluminant,str) and isinstance(toIlluminant,str) and (fromIlluminant == toIlluminant):
         return np.eye(3)
 
     M = CAM_dict[method]
@@ -482,6 +520,7 @@ def color_RGB_to_Lab(RGB,gamut="sRGB"):
     return  Lab
 def color_Lab_to_RGB(Lab,gamut="sRGB"):
     white_point=Gmaut_Illuminant[gamut]
+
     # white_point="D65"
     XYZ=color_Lab_to_XYZ(Lab,whitpoint=white_point)
     # print("XYZ",XYZ)
@@ -495,6 +534,7 @@ def color_Lab_to_XYZ(Lab, whitpoint="D65"):
 
     Lab = np.array(Lab)
     W_XYZ = get_white_point_XYZ(whitpoint)
+
     fxyz=np.empty_like(Lab)
 
     fxyz[..., 1] = (Lab[..., 0]+16) / 116
@@ -775,15 +815,23 @@ def color_HSV_to_RGB(hsv):
 
 
 if __name__ == '__main__':
+
+    x1=np.linspace(0,1,100)
+    y1=Gamma_func_CACHE["CUSTOM"](x1)
+    y2=Degamma_func_CACHE["CUSTOM"](x1)
+    import matplotlib.pyplot as plt
+    plt.plot(x1, y1, label='deGamma')
+    plt.plot(y2,x1,label ="de")
+    plt.show()
     # get_XYZD65_to_AC1C2_M()
-    print(np.round(np.matrix(get_RGB2XYZ_M(gamut="sRGB")).I,3))
+    # print(np.round(np.matrix(get_RGB2XYZ_M(gamut="sRGB")).I,3))
     # print(np.round(get_RGB2XYZ_M(gamut="P3-D65"),8))
     # print(np.round(get_RGB2XYZ_M(gamut="sRGB"),8))
     # lab= color_RGB_to_Lab([55,95,180],gamut="P3-D65")
     # print(color_Lab_to_RGB(lab, gamut="P3-D65")*255)
     # print(color_Lab_to_RGB(lab, gamut="sRGB")*255)
-    print(color_RGB_to_XYZ([50,150,200],gamut="AdobeRGB"))
-    print(get_color_XYZ_CA_Matrix(fromIlluminant="D65", toIlluminant="D50", method="BFD"))
+    # print(color_RGB_to_XYZ([50,150,200],gamut="AdobeRGB"))
+    # print(get_color_XYZ_CA_Matrix(fromIlluminant="D65", toIlluminant="D50", method="BFD"))
 
     # lab = color_RGB_to_Lab(np.array([100, 20, 80])/255,gamut="P3-DCI") #24.12231082  46.83461498 -16.35073021
     # lab=np.array([50, -300, -300])

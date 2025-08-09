@@ -1,8 +1,7 @@
 #!/usr/bin/python3
 from PyQt5.QtCore import QRect, QPoint, QRectF, QSize, QLineF, QPointF, QEventLoop
-from PyQt5.QtGui import QColor, QPainterPath, QKeySequence, QGuiApplication, QPixmap, QPen, QBrush, QImage, QPainter, \
-    QPolygonF, QClipboard, QCursor, QMouseEvent
-from PyQt5.QtWidgets import QGraphicsView, QApplication, QGraphicsScene, QShortcut, QFileDialog, QDialog
+from PyQt5.QtGui import QColor, QPainterPath, QKeySequence, QGuiApplication, QPen, QBrush, QImage, QPolygonF, QClipboard, QCursor, QMouseEvent
+from PyQt5.QtWidgets import QGraphicsView, QApplication, QGraphicsScene, QShortcut, QFileDialog
 
 from .toolbar import *
 from .colorbar import *
@@ -122,6 +121,7 @@ class Screenshot(QGraphicsView):
         self.startX, self.startY = event.x(), event.y()
 
         if self.action == ACTION_SELECT:
+            self.curpos = QCursor.pos()
             if self.mousePosition == MousePosition.OUTSIDE_AREA:
                 self.mousePressed = True
                 self.selected_area = QRect()

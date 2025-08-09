@@ -1,0 +1,75 @@
+/* 主对话框样式 */
+#Setting Dialog {
+    background-color: #f5f5f7;
+    border: 1px solid #d1d1d6;
+    border-radius: 8px;
+}
+
+/* 按钮框样式 */
+QDialogButtonBox {
+    padding: 10px;
+    background-color: #ffffff;
+    border-top: 1px solid #e5e5ea;
+}
+
+/* OK 和 Cancel 按钮样式 */
+QDialogButtonBox QPushButton {
+    min-width: 80px;
+    padding: 6px 12px;
+    margin: 0 5px;
+    border-radius: 4px;
+    font-family: "Arial";
+    font-size: 10pt;
+}
+
+/* OK 按钮（默认按钮） */
+QDialogButtonBox QPushButton:default {
+    background-color: #007aff;
+    color: white;
+    border: none;
+}
+
+QDialogButtonBox QPushButton:default:hover {
+    background-color: #0066cc;
+}
+
+/* Cancel 按钮 */
+QDialogButtonBox QPushButton:not(:default) {
+    background-color: #f5f5f7;
+    color: #333333;
+    border: 1px solid #d1d1d6;
+}
+
+QDialogButtonBox QPushButton:not(:default):hover {
+    background-color: #ebecee;
+}
+
+/* 标签页容器样式 */
+ScrollTab {
+    background-color: #ffffff;
+    border: none;
+    padding: 10px;
+}
+
+/* 标签页控件通用样式（如果需要） */
+QTabWidget::pane {
+    border: 1px solid #e5e5ea;
+    border-radius: 4px;
+    background-color: #ffffff;
+}
+
+QTabBar::tab {
+    padding: 8px 16px;
+    background-color: #f5f5f7;
+    border: 1px solid #e5e5ea;
+    border-bottom-color: transparent;
+    border-radius: 4px 4px 0 0;
+    font-family: "Arial";
+    font-size: 10pt;
+}
+
+QTabBar::tab:selected {
+    background-color: #ffffff;
+    border-color: #e5e5ea;
+    border-bottom-color: #ffffff;
+}

@@ -1,0 +1,40 @@
+{
+    "colorspace": {
+        "RGB": false,
+        "HSV": false,
+        "Lab": false,
+        "XYZ": false
+    },
+    "hotkeys": {
+        "Screen Pick": [
+            16777251,
+            49
+        ],
+        "Pixel Pick": [
+            16777251,
+            50
+        ],
+        "Reset Range": [
+            16777249,
+            48
+        ],
+        "expand Range": [
+            16777249,
+            49
+        ],
+        "Shrink Range": [
+            16777249,
+            50
+        ]
+    },
+    "gamut": "sRGB",
+    "zoom": 100.0,
+    "metrics": [
+        "RGB",
+        "XYZ",
+        "Lab"
+    ],
+    "custom_gamut": {},
+    "fontsize": 8,
+    "loss_hover_opacity": 0.9
+}

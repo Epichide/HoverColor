@@ -1,0 +1,22 @@
+/* table_style.css */
+QTableWidget {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    gridline-color: #ccc;
+}
+QTableWidget::item {
+    padding: 2px 2px;
+    border-bottom: 1px solid #f0f0f0;
+    /* 确保文本可选（默认样式可能影响选择效果） */
+    user-select: text; /* 允许文本选择 */
+}
+QHeaderView::section {
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    /*padding: 6px 8px;*/
+    font-weight: bold;
+}
+QTableWidget::item:selected {
+    background-color: #e6f7ff;
+    color: #333;
+}

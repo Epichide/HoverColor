@@ -1,9 +1,12 @@
 import  sys,os
 
+import numpy as np
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QEventLoop, Qt, pyqtSlot, QPoint, pyqtSignal, QTimer, QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon, QMouseEvent, QCursor, QPixmap
-from PyQt5.QtWidgets import QCheckBox, QLabel, QSpinBox, QVBoxLayout, QWidget, QHBoxLayout, QApplication, QMenu, \
+from PyQt5.QtWidgets import QCheckBox, QDialog, QGridLayout, QLabel, QSpinBox, QVBoxLayout, QWidget, QHBoxLayout, \
+    QApplication, \
+    QMenu, \
     QAction, \
     QMessageBox, \
     QWidgetAction
@@ -12,10 +15,14 @@ from src.RGB import RGBBar
 from src.Lab import LabChart
 # from src.Jch import JchChart
 from src.XYZ import XYZChart
+from src.color_utils.iccinspector import update_custom_icc
 from src.hue import HueChart
 from src.record import RecordForm
 from src.screenshoot import Screenshoot
 from src.hotkeys_utils.hotkey_wid import HotKeyWindow, HotkeyPicker
+from src.setting import SettingDialog
+from src.wid_utils.basewid_utils import DynamicGridLayout
+
 
 #rom src.color_picker import ScaleWindow
 
@@ -57,10 +64,18 @@ class App(QWidget):
         self.setMouseTracking(True)
         self.get_suggetst_size()
         # variable:
+        self.ncol_wid = 3
+        self.custom_gamut={}
+        self.cur_gamut=""
         self.hotkey_funcs={}
         self.func_hotkeys={}
         self.hotkey_workeds={}
-
+        self.gamuts = ["P3-D65", "sRGB", "P3-DCI", "Rec.709", "Rec.2020", "AdobeRGB","CUSTOM"]
+        # square screenshot widget
+        # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+        # qtApp = QApplication(sys.argv)
+        window_icon = QIcon('src/icon/icon.png')  # 替换为你的图标文件路径
+        self.setWindowIcon(window_icon)
         self._initUI()
         self._initSignals()
         self.customContextMenuRequested.connect(self.rightmenu)
@@ -77,59 +92,57 @@ class App(QWidget):
             if act.isChecked():num+=1
         return num
     def _initUI(self):
-        # square screenshot widget
-        # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-        # qtApp = QApplication(sys.argv)
-        window_icon = QIcon('src/icon/icon.png')  # 替换为你的图标文件路径
-        self.setWindowIcon(window_icon)
 
-        # qtApp.exec()
         self.shot1=Screenshoot()
+
         self.rgb_bar=RGBBar(self)
         self.lab_bar=LabChart(self)
         # self.jch_bar=JchChart(self)
         self.hsv_bar=HueChart(self,"hsv")
         self.XYZ_bar=XYZChart(self,"XYZ")
-        # self.lab_bar=HueChart(self,"lab")
+
         self.record=RecordForm(self)
+
+        self.Glayout=DynamicGridLayout(self)
+        self.bar_widgets=[self.rgb_bar,self.hsv_bar,
+                          self.lab_bar,self.XYZ_bar]#self.jch_bar,
+        self.setLayout(self.Glayout)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.contextMenuPolicy()
-        self.Hlayout=QHBoxLayout(self)
-        self.bar_widgets=[self.rgb_bar,self.hsv_bar,
-                          self.lab_bar,self.XYZ_bar,self.record]#self.jch_bar,
         self.init_menu()
+        for n,wid in enumerate(self.bar_widgets):
+            self.Glayout.add_component(wid)
+        self.Glayout.add_record(self.record)
 
-        for wid in self.bar_widgets:
-            self.Hlayout.addWidget(wid)
 
     def init_menu(self):
         self.action_keys={}
         self.widget_keys={}
         self.record_keys={}
         self.gamut_keys={}
+        self.loss_hover_opacity=0.2
         self.menu=QMenu(self)
-        self.submenu_record=QMenu("Record",self.menu)
         self.submenu_palette=QMenu("ColorSpace",self.menu)
         self.submenu_gamut=QMenu("Gamut",self.menu)
         self.submenu_size=QMenu("Size",self.menu)
-        self.register_action(self.rgb_bar,self.submenu_palette,"RGB")
-        self.register_action(self.hsv_bar,self.submenu_palette, "HSV")
-        # self.register_action(self.jch_bar,self.submenu_palette, "JCh")
-        self.register_action(self.lab_bar,self.submenu_palette, "Lab")
-        self.register_action(self.XYZ_bar,self.submenu_palette, "XYZ")
-        gamuts=["P3-D65","sRGB","P3-DCI","Rec.709","Rec.2020","AdobeRGB"]
-        for gamut in gamuts:
+        for bar_wid in self.bar_widgets:
+            if bar_wid.__class__.__name__=="RecordForm": continue
+            self.register_action(bar_wid,self.submenu_palette,bar_wid.colorspace)
+            self.record.connect_wid(bar_wid)
+
+        for gamut in self.gamuts:
             self.register_gamut_action(self.submenu_gamut,gamut)
-        self.menu.addMenu(self.submenu_record)
         self.menu.addMenu(self.submenu_palette)
         self.menu.addMenu(self.submenu_gamut)
         self.menu.addMenu(self.submenu_size)
-        self.zoom_box,self.font_box=self.register_scale_action(self.submenu_size)
+
+        self.zoom_box,self.font_box,self.lock_box=self.register_scale_action(self.submenu_size)
         self.font_box.valueChanged.connect(lambda value: self.set_font_size(value))
         self.zoom_box.valueChanged.connect(lambda value:self.set_zoom_size(value/100))
-        self.action_hotkey = QAction("快捷键设置", self)
-        self.menu.addAction(self.action_hotkey)
-        self.action_hotkey.triggered.connect(self.Hotkey_Setting)
+        self.lock_box.valueChanged.connect(lambda value: setattr(self, 'loss_hover_opacity', value/100))
+        self.action_setting = QAction("设置", self)
+        self.menu.addAction(self.action_setting)
+        self.action_setting.triggered.connect(self.set_Setting)
 
 
         self.action_quit=QAction("退出",self)
@@ -140,11 +153,8 @@ class App(QWidget):
         self.action_quit.triggered.connect(self.log_profile)
 
     def update_width(self):
-        w=0
-        for wid in self.bar_widgets:
-            if wid.isVisible():
-                w+=wid.width()*1.2
-        self.setFixedSize(QSize(int(w),int(self.single_wid_height*self.zoom_ratio)+1))
+
+        self.setFixedSize(self.Glayout.update_layout())
     def _initSignals(self):
         self.ctrled=0
         self.shifted=0
@@ -157,11 +167,12 @@ class App(QWidget):
         self.timer.timeout.connect(self.pullCursor)
         self.timer.start()
         self.press_pos=self.pos()
-        self.connect_show_record("HSV")
+        self.record.set_show_metrics(["RGB","XYZ","Lab"])
+        self.update_width()
         self.set_gamut(gamut="P3-D65")
         self.inhotkey=False
         # register hotkey
-        self.register_hotkey([Qt.Key_Shift,Qt.Key_QuoteLeft],
+        self.register_hotkey([Qt.Key_Alt,Qt.Key_QuoteLeft],
                              self.getCustomColor,"Screen Pick")
         self.register_hotkey([Qt.Key_Control,Qt.Key_QuoteLeft],
                              self.hot_key_event,"Pixel Pick")
@@ -185,24 +196,21 @@ class App(QWidget):
             act.setChecked(False)
         act = self.gamut_keys[gamut]
         act.setChecked(True)
+        self.cur_gamut=gamut
         for wid in self.widget_keys.values():
             if hasattr(wid,"set_gamut"):
                 wid.set_gamut(gamut)
+    def set_enable_gamut(self,gamut="P3-D65",enabled=True):
+        act = self.gamut_keys[gamut]
+        if not enabled:
+            act.setChecked(False)
+
+        act.setEnabled(enabled)
 
     #####--------- RECORD----------------
-    def register_record_action(self,submenu,wid,tex="RGB"):
-        act=QAction(tex,self)
-        act.setCheckable(True)
-        submenu.addAction(act)
-        self.record_keys[tex]=[wid,act]
-        self.record.connect_wid(wid)
-        act.triggered.connect(lambda :self.connect_show_record(tex))
-    def connect_show_record(self,key):
-        for wid,act in self.record_keys.values():
-            act.setChecked(False)
-        wid,act=self.record_keys[key]
-        act.setChecked(True)
-        self.record.set_show_wid(wid)
+
+
+
 
     #####--------- COLORSPACE----------------
     def create_checkale_action(self,name,submenu=None,icon=None):
@@ -224,7 +232,6 @@ class App(QWidget):
         self.action_keys[key]=action_i
         self.widget_keys[action_i]=widget
         action_i.clicked.connect(lambda status :self.change_picker_widget(key))
-        self.register_record_action(self.submenu_record, widget, key)
         # action_i.triggered.connect(lambda :self.change_picker_widget(key))
     def create_spin_action(self,name,vmin,vmax,step=1,submenu=None):
         act = QWidgetAction(self)
@@ -257,8 +264,9 @@ class App(QWidget):
     def register_scale_action(self,submenu=None):
         zoom_box=self.create_spin_action("zoom",vmin=25,vmax=225,step=10,submenu=submenu)
         font_box=self.create_spin_action("font",vmin=2,vmax=70,step=1,submenu=submenu)
+        lock_btn=self.create_spin_action("lock",vmin=0,vmax=100,step=1,submenu=submenu)
 
-        return zoom_box,font_box
+        return zoom_box,font_box,lock_btn
 
 
     def check_dispay_widget_num(self):
@@ -267,22 +275,26 @@ class App(QWidget):
         return num
     def change_picker_widget(self,key):
         print("showed colorspace widget num",self.check_dispay_widget_num())
-        if  self.check_dispay_widget_num():
-            act=self.action_keys[key]
-            status=act.isChecked()
-            print(key,"shown",status)
-            #act.setChecked(~status)
-            if not status:
-                self.widget_keys[act].hide()
-            else:
-                self.widget_keys[act].show()
+        # if  self.check_dispay_widget_num():
+        act=self.action_keys[key]
+        status=act.isChecked()
+        print(key,"shown",status)
+        #act.setChecked(~status)
+        if not status:
+            self.widget_keys[act].hide()
         else:
-            self.action_keys[key].setChecked(True)
+            self.widget_keys[act].show()
+
         # self.record.show()
         self.update_width()
     #####--------- PROFILE----------------
     def log_profile(self):
-        self.profile={"colorspace":{},"hotkeys":{},"gamut":"","zoom":100}
+        self.profile={"colorspace":{},
+                      "hotkeys":{},
+                      "gamut":"",
+                      "zoom":100,
+                      "metrics":["RGB"],
+                      "custom_gamut":{}}
         # SAVE GAMUT shown
         for gamut,act in self.gamut_keys.items():
             if act.isChecked():
@@ -297,30 +309,46 @@ class App(QWidget):
         # save hotkeys
         for funcname,(func,qtkeys) in self.func_hotkeys.items():
             self.profile["hotkeys"][funcname]=qtkeys
-        # save record wid
-        self.profile["record"]=""
-        for record,(wid,act) in self.record_keys.items():
-            if act.isChecked():
-                self.profile["record"]=record
+
         # save profile as json
         self.profile["zoom"]=self.zoom_ratio*100
         self.profile["fontsize"]=self.record.font_size1
+        # save metrics
+        self.profile["metrics"]=self.record.metrics
+        #save custom gamut
+        if self.custom_gamut :
+            for k,v in self.custom_gamut.items():
+                if isinstance(v,np.ndarray):
+                    self.custom_gamut[k]=v.tolist()
+        self.profile["custom_gamut"]=self.custom_gamut
+        # save opacity
+        self.profile["loss_hover_opacity"]=self.loss_hover_opacity
         import json
-        fileName="src/profile/profile"
-        if not os.path.exists("src/profile"):
-            os.makedirs("src/profile")
+        fileName= "src/resource/profile/profile"
+        if not os.path.exists("src/resource/profile"):
+            os.makedirs("src/resource/profile")
         with open(fileName, 'w', encoding='utf-8') as file:
             json.dump(self.profile, file, ensure_ascii=False, indent=4)
 
     def load_profile(self):
         import json
-        fileName="src/profile/profile"
+        fileName= "src/resource/profile/profile"
         self.zoom_box.setValue(100)
         self.font_box.setValue(8)
+        self.lock_box.setValue(int(self.loss_hover_opacity*100))
         if not os.path.exists(fileName):return
+
 
         with open(fileName, 'r', encoding='utf-8') as file:
             self.profile=json.load(file)
+        # load custom gamut
+        self.custom_gamut=self.profile.get("custom_gamut",{})
+        if self.custom_gamut :
+            for k,v in self.custom_gamut.items():
+                if isinstance(v,list):
+                    self.custom_gamut[k]=np.array(v)
+        update_custom_icc(self.custom_gamut,skip_lab_proj=True)
+
         # load gamut
         self.set_gamut(gamut=self.profile["gamut"])
         # load colorspace
@@ -333,9 +361,10 @@ class App(QWidget):
                 act.setChecked(False)
                 self.widget_keys[act].hide()
         self.update_width()
-        #load record
-        record=self.profile["record"]
-        self.connect_show_record(record)
+        #load metrics
+        metrics=self.profile["metrics"]
+        self.record.set_show_metrics(metrics)
+        self.update_width()
         #load hotkeys
         hot_keys=self.profile["hotkeys"]
         self.hotkey_workeds = {}
@@ -351,6 +380,8 @@ class App(QWidget):
         self.zoom_box.setValue(int(zoom))
         fontsize=self.profile["fontsize"]
         self.font_box.setValue(fontsize)
+        self.loss_hover_opacity=self.profile.get("loss_hover_opacity",0.2)
+        self.lock_box.setValue(int(self.loss_hover_opacity*100))
 
 
     #####--------- HOTKEY----------------
@@ -364,29 +395,61 @@ class App(QWidget):
         for k in self.hotkey_workeds.keys():
             self.hotkey_workeds[k]=False
 
-    def Hotkey_Setting(self):
+    def set_Setting(self):
         self.inhotkey=True
         loop = QEventLoop()
-        hotkey_wid = HotKeyWindow()
-        for funcname,(func,qtkeys) in self.func_hotkeys.items():
-            hotkey_wid.register(funcname, qtkeys)
 
-        hotkey_wid.show()
-        hotkey_wid.widget_closed.connect(loop.quit)
-        loop.exec()
-        res,hot_keys = hotkey_wid.get_hot_keys() #  funcname: qtkeys
-        # hotkey_wid.close()
-        if not res:
-            return
-        self.hotkey_workeds={}
-        self.hotkey_funcs={}
-        for funcname,qtkeys in hot_keys.items():
-            self.func_hotkeys[funcname][1]=qtkeys
-            func=self.func_hotkeys[funcname][0]
-            qtkeys_str = ",".join([str(vk) for vk in qtkeys])
-            if qtkeys:
-                self.hotkey_funcs[qtkeys_str] = [func, funcname, qtkeys]
-                self.hotkey_workeds[qtkeys_str] = False
+        setting_diag=SettingDialog(self)
+        setting_diag.ColorSapce_Setting(self.gamuts,self.custom_gamut,self.cur_gamut)
+        setting_diag.Record_Setting(self.record)
+        setting_diag.Hotkey_Setting(self.func_hotkeys)
+        res=setting_diag.exec_()
+
+        if res==QDialog.Accepted:
+            self.record.set_show_metrics(setting_diag.metrics)
+            self.update_width()
+            hot_keys=setting_diag.hot_keys
+            gamutinfo=setting_diag.seleted_gamut_info
+            custom_gamut=setting_diag.custom_gamut
+            if (custom_gamut and
+                    custom_gamut["icc_file"]!=self.custom_gamut.get("icc_file",None)):# load new icc
+                update_custom_icc(self.custom_gamut)
+                icc_file = custom_gamut.get("icc_file", None)
+
+                # copy to resource
+                def _get_file(relative_path):
+                    return os.path.abspath(os.path.join(os.path.dirname(__file__), relative_path))
+
+                icc_file_copy = _get_file("src/resource/profile/custom_icc.icc")
+                if icc_file is not None and os.path.exists(icc_file):
+                    import shutil
+                    shutil.copyfile(icc_file, icc_file_copy)
+                else:
+                    icc_file = None
+                custom_gamut["icc_file"] = icc_file_copy
+                self.set_enable_gamut("CUSTOM",True)
+            elif custom_gamut:
+                self.set_enable_gamut("CUSTOM", True)
+            else:
+                self.set_enable_gamut("CUSTOM",False)
+
+            self.custom_gamut=custom_gamut if custom_gamut else None
+            print("yes")
+            if gamutinfo is not None:
+                if gamutinfo["Gamut Type"]=="icc":
+                    self.set_gamut("CUSTOM")
+                else:
+                    self.set_gamut(gamutinfo["Gamut"])
+
+            self.hotkey_workeds={}
+            self.hotkey_funcs={}
+            for funcname,qtkeys in hot_keys.items():
+                self.func_hotkeys[funcname][1]=qtkeys
+                func=self.func_hotkeys[funcname][0]
+                qtkeys_str = ",".join([str(vk) for vk in qtkeys])
+                if qtkeys:
+                    self.hotkey_funcs[qtkeys_str] = [func, funcname, qtkeys]
+                    self.hotkey_workeds[qtkeys_str] = False
         self.inhotkey=False
 
         return
@@ -401,6 +464,7 @@ class App(QWidget):
     def hot_key_event(self,message=""):
         for wid in self.bar_widgets:
             wid.freeze_cursor()
+        self.record.freeze_cursor()
         return message
 
     ## ------- mouse move cursor
@@ -409,9 +473,9 @@ class App(QWidget):
         for wid  in self.widget_keys.values():
             wid.pick_color(r,g,b)
 
-    def pullCursor(self):
+    def pullCursor(self): # timer timeout
         import win32api,win32con
-        if not self.inhotkey:
+        if not self.inhotkey:# 正在设置热键时不响应热键
 
             GLOBAL_PRESS_str=",".join([str(vk) for  vk in GLOBAL_PRESS])
             if GLOBAL_PRESS_str in self.hotkey_funcs :
@@ -446,6 +510,19 @@ class App(QWidget):
             cur=event.pos()-self.press_pos
             self.move(self.mapToParent(cur))
             event.accept()
+
+
+    def enterEvent(self, event):
+        # 鼠标进入时完全不透明
+        self.setWindowOpacity(1.0)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        # 鼠标离开时恢复半透明
+        self.setWindowOpacity(self.loss_hover_opacity)
+        super().leaveEvent(event)
+
+
 from src.hotkeys_utils.response_key import GLOBAL_PRESS, listener
 if __name__ == '__main__':
     app=QApplication(sys.argv)

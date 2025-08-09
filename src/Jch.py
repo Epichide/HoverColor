@@ -24,6 +24,9 @@ class JchChart(HueChart):
     def __init__(self,parent=None,mode="hsv"):
         super().__init__(parent)
         self.colorspace = "Jch"
+        self.metrics ={
+            "Jch":0,
+        }
         self.metric = ""
 
     def create_background(self):
@@ -66,7 +69,8 @@ class JchChart(HueChart):
 
         color_string = ",".join([str(r), str(g), str(b)])
         self.hue_cur.setStyleSheet("Qlabel{background-color: rgb(" + color_string + ");}")
-        self.pos_value_signal.emit([v,c,h])
+        self.metrics["Jch"]=[v,c,h]
+        self.pos_value_signal.emit(self.metrics)
         return v,c,h
 
 def create_jch_img(l=50,nsize=500):

@@ -30,6 +30,11 @@ class LabChart(HueChart):
         self.Lab_1 = None
         self.Lab_2 = None
         self.colorspace = "Lab"
+        self.metrics={
+            "Lab":0,
+            "ΔE2000":0,
+            # "Lch":0
+        }
         self.metric = "ΔE2000"
         self.gamut= gamut
         self.create_background()
@@ -162,7 +167,9 @@ class LabChart(HueChart):
         self.hue_cur.setStyleSheet("Qlabel{background-color: rgb(" + color_string + ");}")
         self.Lab_2=[v,la,lb]
         deltaE=self.get_deltaE()
-        self.pos_value_signal.emit([v,la,lb,deltaE])
+        self.metrics["Lab"]=[round(v,2), round(la,2), round(lb,2)]
+        self.metrics["ΔE2000"]=np.round(deltaE,4)
+        self.pos_value_signal.emit(self.metrics)
         return v,la,lb
 
 def create_lab_img(l=50,nsize=500):
@@ -215,7 +222,7 @@ def create_lab_img_cus(l=50,nsize=500,gamut="P3-D65"):
     A5=np.isnan(rgb)
     # rgb=rgb.clip(0,1)
     lab=color_RGB_to_Lab(rgb,gamut=gamut)
-    A2=np.max(np.abs(arr-lab),axis=2)>0.001
+    A2=np.max(np.abs(arr-lab),axis=2)>0.1
     A3=np.max(np.abs(rgb),axis=2)>1
     A4=np.min((rgb),axis=2)<0
     A2=A2|A3|A4|A5[:,:,0]|A5[:,:,1]|A5[:,:,2]
@@ -226,12 +233,16 @@ def create_lab_img_cus(l=50,nsize=500,gamut="P3-D65"):
     img=np.array(rgb,dtype=np.uint8)
     img=np.concatenate([img,AP],axis=2)
     area=np.sum(A2)
+    # from matplotlib import pyplot as plt
+    # plt.imshow(np.max(np.abs(arr-lab),axis=-1))
     # plt.imshow(img)
     # plt.show()
     # from skimage import io
     # io.imsave(str(l) + "_lab_proj_0-100.png", img)
     return img
-def create_lab_proj_cus(nsize=500,initial=50,gamut="P3-D65"):
+def create_lab_proj_cus(nsize=500,initial=80,gamut="P3-D65"):
+    def _get_file(relative_path):
+        return os.path.abspath(os.path.join(os.path.dirname(__file__), relative_path))
     img=np.zeros([nsize,nsize,4],dtype=np.uint8)
     mid=initial
     for v in range(mid,0,-1):
@@ -243,7 +254,7 @@ def create_lab_proj_cus(nsize=500,initial=50,gamut="P3-D65"):
         new_mask=img_plane[:,:,-1]>img[:,:,-1]
         img[new_mask]=img_plane[new_mask]
     from  skimage import  io
-    outfile=os.path.join("resource","Lab",str(mid)+f"_lab_proj_0-100_{gamut}.png")
+    outfile=_get_file(os.path.join("resource","Lab",str(mid)+f"_lab_proj_0-100_{gamut}.png"))
     io.imsave(outfile,img)
 
 if __name__ == '__main__':
@@ -252,5 +263,6 @@ if __name__ == '__main__':
     # create_lab_proj_cus(500,80,gamut="P3-DCI")
     # create_lab_proj_cus(500,80,gamut="Rec.709")
     # create_lab_proj_cus(500,80,gamut="Rec.2020")
-    create_lab_proj_cus(500,80,gamut="AdobeRGB")
+    # create_lab_proj_cus(500,80,gamut="AdobeRGB")
+    create_lab_proj_cus(500,80,gamut="CUSTOM")
     # create_lab_proj_cus(500,80,gamut="")

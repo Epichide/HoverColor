@@ -1,0 +1,40 @@
+/* 表格整体样式 */
+QTableWidget {
+    text-align: center;
+    border: 1px solid #000000; /* 最外层黑色边框 */
+
+    background-color: white; /* 表格背景色 */
+}
+
+
+/* 表格项样式 - 实现文字居中 */
+QTableWidget::item {
+    text-align: center; /* 水平居中 */
+    vertical-align: middle; /* 垂直居中 */
+    padding: 2px; /* 内边距，避免文字贴边 */
+}
+
+QTableWidgetItem{
+    text-align: center; /* 水平居中 */
+    vertical-align: middle; /* 垂直居中 */
+    padding: 2px; /* 内边距，避免文字贴边 */
+}
+
+/* 表头样式 */
+QTableWidget QHeaderView::section {
+    text-align: center; /* 表头文字水平居中 */
+    vertical-align: middle; /* 表头文字垂直居中 */
+    background-color: #f0f0f0; /* 表头背景色 */
+    border: 1px solid #dcdcdc; /* 表头边框 */
+    font-weight: bold; /* 表头文字加粗 */
+}
+
+/* 水平表头 */
+QTableWidget QHeaderView::horizontal {
+    border-bottom: 1px solid #dcdcdc; /* 水平表头下边框 */
+}
+
+/* 垂直表头（当前设置为隐藏，保留样式备用） */
+QTableWidget QHeaderView::vertical {
+    border-right: 1px solid #dcdcdc; /* 垂直表头右边框 */
+}

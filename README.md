@@ -16,6 +16,24 @@ example
     reset : ctrl + 0
 
 ## update log
+- 20250810
+  - Custom Record
+  - Parse and load ICC profile 
+    - What is chad?
+      - [ICC Technical Note 02-2003 Chadtag for conversion of D65 to D50 for use in profiles](https://www.color.org/chadtag.xalter)
+      - [Why is "Display P3 - Green Primary" different from the ICC profile?](https://github.com/colour-science/colour/discussions/739)
+    - ICC display ICC use Bradford Chromatic Adaptation
+      - [Bradford Chromatic Adaptation](http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html)
+      - [https://www.color.org/chadtag.xalter](https://www.color.org/chadtag.xalter)
+    - Why display ICC use D50 PCS Illuminant:
+      - [ICC Profile Format](https://www.color.org/specification/ICC1v43_2010-12.pdf) : "The PCS is based on the CIE 1931 XYZ color space with a D50 illuminant."
+      - [Why D50?](https://www.color.org/whyd50.xalter)
+      - [The Reference White in Adobe Photoshop Lab Mode](https://color-image.com/2011/10/the-reference-white-in-adobe-photoshop-lab-mode/)
+      - [ICC’s D50 vs sRGB D65 problems](https://discuss.pixls.us/t/iccs-d50-vs-srgb-d65-problems/11134)
+    - parse ICC to get RGB2XYZ and WP_Illuminant: 
+      - [Why is "Display P3 - Green Primary" different from the ICC profile?](https://github.com/colour-science/colour/discussions/739)
+      - [ICC Profile Format](https://www.color.org/specification/ICC1v43_2010-12.pdf) : "The PCS is based on the CIE 1931 XYZ color space with a D50 illuminant."
+    - Load and parse ICC: forked from [iccinspector.py](https://github.com/sobotka/iccinspector)
 - 20250725:
   - adaptive resolution and size
 - 20250719:

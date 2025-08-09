@@ -5,6 +5,8 @@
 # @Time: 2025/7/16 23:57
 # @File: hotkey_picker.py
 # @Software: PyCharm
+import os
+
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox, QPushButton
 
@@ -46,22 +48,7 @@ class HotkeyPicker(QPushButton):
         """
 
         super(HotkeyPicker, self).__init__(parent)
-        self.setStyleSheet("""
-            QPushButton {
-                background-color: #f0f0f0;
-                border: 1px solid #999999;
-                color: #999999;
-                
-            }
-            QPushButton:focus {
-                background-color: #d0d0d0;
-                border: 2px solid #4444ff;
-            }
-        """)
-            # QPushButton:!focus { /* 使用 !focus 选择器 */
-            #     background-color: #f0f0f0; /* 恢复背景颜色 */
-            #     border: none; /* 移除边框 */
-            # }
+
         self._release=False
         # Init arguments
         self.__default_text = default_text
@@ -81,10 +68,33 @@ class HotkeyPicker(QPushButton):
         self.__in_selection = False
 
         self.setText(self.__default_text)
+        self.load_style()
 
         # Prevent the hotkey picker from focusing automatically (e.g. if it is the only widget)
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+    def load_style(self):
+        def load_stylesheet(self):
+            """加载CSS样式表"""
+            # 假设CSS文件与当前文件在同一目录
+            css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../resource/css/hotkey_picker.css")
 
+            if os.path.exists(css_path):
+                with open(css_path, 'r', encoding='utf-8') as f:
+                    self.setStyleSheet(f.read())
+            else:
+                # 如果CSS文件不存在，使用默认样式
+                default_style = """
+                QPushButton.hotkey-picker {
+                    background-color: #f0f0f0;
+                    border: 1px solid #999999;
+                    color: #999999;
+                }
+                QPushButton.hotkey-picker:focus {
+                    background-color: #d0d0d0;
+                    border: 2px solid #4444ff;
+                }
+                """
+                self.setStyleSheet(default_style)
     def focusInEvent(self, event):
         """Set text to selection text
 
@@ -133,18 +143,7 @@ class HotkeyPicker(QPushButton):
         if event.key() == Qt.Key_Shift :
 
             msg_box = QMessageBox(self)
-            msg_box.setStyleSheet("""
-            QPushButton {
-                background-color: #ffffff;
-                border: 0px solid #000000;
-                color: #000000;
-                
-            }
-            QPushButton:focus {
-                background-color: #ffffff;
-                border: 0px solid #000000;
-            }
-        """)
+
             msg_box.setIcon(QMessageBox.Information)
             msg_box.setWindowTitle("Information")
             msg_box.setText("Key <b> Shift </b>  is not supported")
