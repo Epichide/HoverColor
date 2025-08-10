@@ -57,17 +57,74 @@ QTabBar::tab:selected {
 QTabWidget::pane {
     border: 1px solid #bce0f9; /* 内容区边框，和表格、标签栏统一 */
     border-radius: 4px;
-    margin-top: -1px; /* 与标签栏底部贴合，视觉更连贯 */
+    margin-top: 1px; /* 与标签栏底部贴合，视觉更连贯 */
 }
 
 QRadioButton::indicator::unchecked{
-border: 1px solid #bce0f9;
-border-radius: 6px;
-background-color: white;
-width: 10px; height: 10px;
-margin-left: 5px;}
+    border: 1px solid #bce0f9;
+    border-radius: 6px;
+    background-color: white;
 
 
+}
+
+/* 滚动条整体样式 */
+QScrollBar:vertical {
+    background-color: #f5f7fa;
+    border: 1px solid gray;
+    width: 8px;
+    margin: 0px;
+}
+
+QScrollBar:horizontal {
+    border: 1px solid gray;
+    background-color: #f5f7fa;
+    height: 8px;
+    margin: 0px;
+}
+
+/* 滚动条滑块样式 */
+QScrollBar::handle:vertical {
+    background-color: #bce0f9;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #bce0f9;
+    border-radius: 4px;
+    min-width: 20px;
+}
+
+/* 滑块悬停效果 */
+QScrollBar::handle:vertical:hover,
+QScrollBar::handle:horizontal:hover {
+    background-color: #99cef9;
+}
+
+/* 滚动条两端按钮样式 */
+QScrollBar::sub-line:vertical,
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:horizontal,
+QScrollBar::add-line:horizontal {
+    background-color: gray;
+    width: 0px;
+    height: 0px;
+}
+
+/* 滚动条凹槽样式（滑块前后的区域） */
+QScrollBar::sub-page:vertical,
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:horizontal,
+QScrollBar::add-page:horizontal {
+    background-color: transparent;
+}
+/* 滚动条交叉角落区域样式 */
+QScrollArea QAbstractScrollArea::corner,
+QAbstractScrollArea::corner {
+    background-color: #bce0f9; /* 与滚动条背景色一致 */
+    border: 1px solid gray; /* 可选：添加边框与其他元素呼应 */
+}
 
 
 
