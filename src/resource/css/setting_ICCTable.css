@@ -1,22 +1,125 @@
 /* table_style.css */
-QTableWidget {
-    border: 1px solid #ddd;
+
+/* =============== QTabWidget 样式 =============== */
+QTabWidget::tab-bar {
+    /* 让标签栏与窗口更贴合，接近截图布局 */
+    left: 2px;
+}
+
+QTabBar::tab {
+    background-color: #e9f5ff; /* 标签未选中时背景，匹配浅蓝风格 */
+    color: #333;              /* 标签文字颜色 */
+    border: 1px solid #bce0f9;/* 标签边框 */
+    border-bottom: none;     /* 底部无边框，避免与内容区重叠 */
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    padding: 4px 10px;       /* 标签内边距，让文字居中 */
+    margin-right: 2px;       /* 标签之间间距 */
+}
+
+QTabBar::tab:selected {
+    background-color: #ffffff; /* 选中标签背景变白，贴合截图 */
+    border: 1px solid #bce0f9;
+    border-bottom: 1px solid #ffffff; /* 覆盖下方边框，避免线条断裂 */
+    font-weight: bold;         /* 选中标签文字加粗，和截图一致 */
+}
+
+QTabWidget::pane {
+    border: 1px solid #bce0f9; /* 内容区边框，和表格、标签栏统一 */
     border-radius: 4px;
-    gridline-color: #ccc;
+    margin-top: -1px; /* 与标签栏底部贴合，视觉更连贯 */
 }
-QTableWidget::item {
-    padding: 2px 2px;
-    border-bottom: 1px solid #f0f0f0;
-    /* 确保文本可选（默认样式可能影响选择效果） */
-    user-select: text; /* 允许文本选择 */
-}
-QHeaderView::section {
-    background-color: #ffffff;
-    border: 1px solid #ddd;
-    /*padding: 6px 8px;*/
-    font-weight: bold;
-}
-QTableWidget::item:selected {
-    background-color: #e6f7ff;
+
+/* =============== QRadioButton 样式 =============== */
+QRadioButton {
     color: #333;
+    spacing: 4px;
+}
+
+QRadioButton::indicator {
+    width: 14px; /* 缩小尺寸，更贴近截图里的紧凑感 */
+    height: 14px;
+    border: 2px solid #99c7e9;
+    border-radius: 7px; /* 圆形适配小尺寸 */
+    background-color: #ffffff;
+}
+
+QRadioButton::indicator:checked {
+    border: 2px solid #4da6ff;
+}
+
+QRadioButton::indicator:checked::after {
+    content: "";
+    display: block;
+    width: 8px;
+    height: 8px;
+    margin: 2px auto; /* 居中显示圆点 */
+    border-radius: 4px;
+    background-color: #4da6ff;
+}
+
+QRadioButton:hover::indicator {
+    border-color: #66b2ff;
+}
+
+QRadioButton:disabled {
+    color: #999;
+}
+
+QRadioButton:disabled::indicator {
+    border-color: #ccd9e5;
+    background-color: #f5f7fa;
+}
+
+/* =============== QTableWidget 原有样式优化 =============== */
+QTableWidget {
+    border: 1px solid #bce0f9;
+    border-radius: 4px;
+    gridline-color: #bce0f9;
+    background-color: #ffffff;
+    alternate-background-color: #f7fbff;
+}
+
+QTableWidget::item {
+  /*  padding: 4px 6px;
+    border-bottom: 1px solid #e9f5ff;
+    user-select: text;
+    color: #333;*/
+    background-color: transparent;
+}
+
+QHeaderView::section {
+    background-color: #e9f5ff;
+    border: 1px solid #bce0f9;
+    font-weight: bold;
+    color: #333;
+    padding: 4px 6px;
+    border-left: none;
+}
+
+QHeaderView::section:first {
+    border-left: 1px solid #bce0f9;
+}
+
+QTableWidget::item:selected {
+    background-color: #cfe8ff;
+    color: #333;
+}
+
+QTableWidget::item:hover {
+    background-color: #f0f7ff;
+}
+
+/* =============== 按钮样式（补充，截图里底部按钮风格） =============== */
+QPushButton {
+    background-color: #e9f5ff;
+    color: #333;
+    border: 1px solid #bce0f9;
+    border-radius: 4px;
+    padding: 4px 12px;
+    margin: 0 4px; /* 按钮之间间距 */
+}
+
+QPushButton:hover {
+    background-color: #cfe8ff;
 }

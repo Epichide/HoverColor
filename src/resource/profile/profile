@@ -7,12 +7,12 @@
     },
     "hotkeys": {
         "Screen Pick": [
-            16777251,
-            49
+            16777249,
+            96
         ],
         "Pixel Pick": [
             16777251,
-            50
+            96
         ],
         "Reset Range": [
             16777249,
@@ -27,14 +27,15 @@
             50
         ]
     },
-    "gamut": "sRGB",
+    "gamut": "P3-D65",
     "zoom": 100.0,
     "metrics": [
         "RGB",
         "XYZ",
-        "Lab"
+        "Lab",
+        "G"
     ],
     "custom_gamut": {},
-    "fontsize": 8,
-    "loss_hover_opacity": 0.9
+    "fontsize": 9,
+    "loss_hover_opacity": 1.0
 }

@@ -114,7 +114,8 @@ class MetricsGroup(QtWidgets.QWidget):
                 if wid.objectName() == metric:
                     return # already exists
             wid= QLabel(f"{colorspace}:{metric}", self)
-            wid.setStyleSheet("border: 1px solid gray; padding: 2px;")
+            wid.setStyleSheet("border: 1px solid #bce0f9; "
+                              "padding: 2px;")
             wid.setObjectName(metric)
 
             self.choose_layout.addWidget(wid)

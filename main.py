@@ -4,7 +4,8 @@ import numpy as np
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import QEventLoop, Qt, pyqtSlot, QPoint, pyqtSignal, QTimer, QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon, QMouseEvent, QCursor, QPixmap
-from PyQt5.QtWidgets import QCheckBox, QDialog, QGridLayout, QLabel, QSpinBox, QVBoxLayout, QWidget, QHBoxLayout, \
+from PyQt5.QtWidgets import QCheckBox, QDialog, QGridLayout, QLabel, QSpinBox, QStyleFactory, QVBoxLayout, QWidget, \
+    QHBoxLayout, \
     QApplication, \
     QMenu, \
     QAction, \
@@ -63,6 +64,7 @@ class App(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setMouseTracking(True)
         self.get_suggetst_size()
+
         # variable:
         self.ncol_wid = 3
         self.custom_gamut={}
@@ -320,7 +322,7 @@ class App(QWidget):
             for k,v in self.custom_gamut.items():
                 if isinstance(v,np.ndarray):
                     self.custom_gamut[k]=v.tolist()
-        self.profile["custom_gamut"]=self.custom_gamut
+        self.profile["custom_gamut"]=self.custom_gamut if self.custom_gamut else {}
         # save opacity
         self.profile["loss_hover_opacity"]=self.loss_hover_opacity
         import json
@@ -433,7 +435,7 @@ class App(QWidget):
             else:
                 self.set_enable_gamut("CUSTOM",False)
 
-            self.custom_gamut=custom_gamut if custom_gamut else None
+            self.custom_gamut=custom_gamut if custom_gamut else {}
             print("yes")
             if gamutinfo is not None:
                 if gamutinfo["Gamut Type"]=="icc":
@@ -526,6 +528,7 @@ class App(QWidget):
 from src.hotkeys_utils.response_key import GLOBAL_PRESS, listener
 if __name__ == '__main__':
     app=QApplication(sys.argv)
+    QApplication.setStyle(QStyleFactory.create("Fusion"));
     listener.start()
     # QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     ex=App()
