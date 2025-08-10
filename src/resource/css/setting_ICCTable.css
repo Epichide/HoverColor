@@ -81,10 +81,10 @@ QTableWidget {
 }
 
 QTableWidget::item {
-  /*  padding: 4px 6px;
-    border-bottom: 1px solid #e9f5ff;
+    padding: 1px 1px;
+    border: 1px solid #e9f5ff;
     user-select: text;
-    color: #333;*/
+    color: #333;
     background-color: transparent;
 }
 
