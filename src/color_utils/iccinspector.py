@@ -443,7 +443,7 @@ def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
             def degamma_func(x):
                 return np.where(x< -b/a,0,np.power(a*x+b,g))
             def gamma_func(x):
-                return np.where(x<0,0,np.power(x,1/g)-b/a)
+                return np.where(x<0,0,(np.power(x,1/g)-b)/a)
         elif _funcid==2:
 
             g= float(parameters.get("g", 1))
@@ -455,7 +455,7 @@ def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
             def degamma_func(x):
                 return np.where(x< -b/a,c,np.power(a*x+b,g)+c)
             def gamma_func(x):
-                return np.where(x<0,0,np.power(x,1/g)-b/a+c)
+                return np.where(x<c,0,(np.power(x-c,1/g)-b)/a)
         elif _funcid==3: # √
             g= float(parameters.get("g", 1))
             a= float(parameters.get("a", 1))
@@ -483,7 +483,7 @@ def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
             def degamma_func(x):
                 return np.where(x<d,c*x+f,np.power(a*x+b,g)+e)
             def gamma_func(x):
-                return np.where(x<0,0,np.power(x,1/g)-b/a+e if x>=d else c*x[x<d]+f)
+                return np.where(x<c*d+f,0,np.power(x-e,1/g)-b/a )
     elif curvetype=="curve":
         if _funcid == 1:#"Power Function":
             y = numpy.power(x, parameters)
