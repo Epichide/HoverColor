@@ -559,6 +559,26 @@ def test_XYZ_to_Lab():
     XYZ2=colour.Lab_to_XYZ(Lab2)
     print(XYZ1,XYZ2)
 
+# ---- Lab - Lch----
+def color_Lab_to_Lch(Lab):
+    Lab = np.array(Lab)
+    L=Lab[...,0]
+    a=Lab[...,1]
+    b=Lab[...,2]
+    C=np.sqrt(a**2+b**2)
+    h=np.arctan2(b,a)*180/np.pi
+    h=np.where(h<0,h+360,h)
+    Lch=np.stack([L,C,h],axis=-1)
+    return Lch
+def color_Lch_to_Lab(Lch):
+    Lch = np.array(Lch)
+    L=Lch[...,0]
+    C=Lch[...,1]
+    h=Lch[...,2]*np.pi/180
+    a=C*np.cos(h)
+    b=C*np.sin(h)
+    Lab=np.stack([L,a,b],axis=-1)
+    return Lab
 
 
 # --------- XYZ - YCxCz ---------

@@ -7,9 +7,9 @@ QTabWidget::tab-bar {
 }
 
 QTabBar::tab {
-    background-color: #e9f5ff; /* 标签未选中时背景，匹配浅蓝风格 */
+    background-color: #DBE7F1; /* 标签未选中时背景，匹配浅蓝风格 */
     color: #333;              /* 标签文字颜色 */
-    border: 1px solid #bce0f9;/* 标签边框 */
+    border: 1px solid #A0C3DC;/* 标签边框 */
     border-bottom: none;     /* 底部无边框，避免与内容区重叠 */
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
@@ -19,13 +19,13 @@ QTabBar::tab {
 
 QTabBar::tab:selected {
     background-color: #ffffff; /* 选中标签背景变白，贴合截图 */
-    border: 1px solid #bce0f9;
+    border: 1px solid #A0C3DC;
     border-bottom: 1px solid #ffffff; /* 覆盖下方边框，避免线条断裂 */
     font-weight: bold;         /* 选中标签文字加粗，和截图一致 */
 }
 
 QTabWidget::pane {
-    border: 1px solid #bce0f9; /* 内容区边框，和表格、标签栏统一 */
+    border: 1px solid #A0C3DC; /* 内容区边框，和表格、标签栏统一 */
     border-radius: 4px;
     margin-top: -1px; /* 与标签栏底部贴合，视觉更连贯 */
 }
@@ -34,7 +34,10 @@ QTabWidget::pane {
 QRadioButton {
     color: #333;
     spacing: 4px;
+    font-size: 30px; /* 字体大小调整，适应截图风格 */
 }
+
+
 
 QRadioButton::indicator {
     width: 14px; /* 缩小尺寸，更贴近截图里的紧凑感 */
@@ -73,24 +76,24 @@ QRadioButton:disabled::indicator {
 
 /* =============== QTableWidget 原有样式优化 =============== */
 QTableWidget {
-    border: 1px solid #bce0f9;
+    border: 1px solid #A0C3DC;
     border-radius: 4px;
-    gridline-color: #bce0f9;
+    gridline-color: #A0C3DC;
     background-color: #ffffff;
     alternate-background-color: #f7fbff;
 }
 
 QTableWidget::item {
     padding: 1px 1px;
-    border: 1px solid #e9f5ff;
+    border: 1px solid #DBE7F1;
     user-select: text;
     color: #333;
     background-color: transparent;
 }
 
 QHeaderView::section {
-    background-color: #e9f5ff;
-    border: 1px solid #bce0f9;
+    background-color: #DBE7F1;
+    border: 1px solid #A0C3DC;
     font-weight: bold;
     color: #333;
     padding: 4px 6px;
@@ -98,7 +101,7 @@ QHeaderView::section {
 }
 
 QHeaderView::section:first {
-    border-left: 1px solid #bce0f9;
+    border-left: 1px solid #A0C3DC;
 }
 
 QTableWidget::item:selected {
@@ -112,9 +115,9 @@ QTableWidget::item:hover {
 
 /* =============== 按钮样式（补充，截图里底部按钮风格） =============== */
 QPushButton {
-    background-color: #e9f5ff;
+    background-color: #DBE7F1;
     color: #333;
-    border: 1px solid #bce0f9;
+    border: 1px solid #A0C3DC;
     border-radius: 4px;
     padding: 4px 12px;
     margin: 0 4px; /* 按钮之间间距 */

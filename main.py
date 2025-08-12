@@ -1,15 +1,13 @@
 import  sys,os
 
 import numpy as np
-from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import QEventLoop, Qt, pyqtSlot, QPoint, pyqtSignal, QTimer, QSize
-from PyQt5.QtGui import QCloseEvent, QColor, QIcon, QMouseEvent, QCursor, QPixmap
-from PyQt5.QtWidgets import QCheckBox, QDialog, QGridLayout, QLabel, QSpinBox, QStyleFactory, QVBoxLayout, QWidget, \
+from PyQt5.QtCore import QEventLoop, Qt, pyqtSignal, QTimer
+from PyQt5.QtGui import QColor, QIcon, QCursor
+from PyQt5.QtWidgets import QCheckBox, QDialog, QLabel, QSpinBox, QStyleFactory, QWidget, \
     QHBoxLayout, \
     QApplication, \
     QMenu, \
     QAction, \
-    QMessageBox, \
     QWidgetAction
 #from src.color_platte import get_average_clor
 from src.RGB import RGBBar
@@ -20,18 +18,18 @@ from src.color_utils.iccinspector import update_custom_icc
 from src.hue import HueChart
 from src.record import RecordForm
 from src.screenshoot import Screenshoot
-from src.hotkeys_utils.hotkey_wid import HotKeyWindow, HotkeyPicker
 from src.setting import SettingDialog
 from src.wid_utils.basewid_utils import DynamicGridLayout
-
+from src.utils.file_utils import _get_file
+from src.wid_utils.hotkeys_utils.response_key import GLOBAL_PRESS, listener
 
 #rom src.color_picker import ScaleWindow
 
 
 
 class App(QWidget):
-    __version__="v1.2"
-    __Appname__="Huepicker"
+    __version__="v1.5.1"
+    __Appname__="HoverColor"
 
     colorChanged=pyqtSignal(QColor)
     cursor_moved =pyqtSignal(object)
@@ -415,14 +413,11 @@ class App(QWidget):
             custom_gamut=setting_diag.custom_gamut
             if (custom_gamut and
                     custom_gamut["icc_file"]!=self.custom_gamut.get("icc_file",None)):# load new icc
-                update_custom_icc(self.custom_gamut)
+                update_custom_icc(custom_gamut)
                 icc_file = custom_gamut.get("icc_file", None)
 
                 # copy to resource
-                def _get_file(relative_path):
-                    return os.path.abspath(os.path.join(os.path.dirname(__file__), relative_path))
-
-                icc_file_copy = _get_file("src/resource/profile/custom_icc.icc")
+                icc_file_copy = _get_file("resource/profile/custom_icc.icc")
                 if icc_file is not None and os.path.exists(icc_file):
                     import shutil
                     shutil.copyfile(icc_file, icc_file_copy)
@@ -476,7 +471,6 @@ class App(QWidget):
             wid.pick_color(r,g,b)
 
     def pullCursor(self): # timer timeout
-        import win32api,win32con
         if not self.inhotkey:# 正在设置热键时不响应热键
 
             GLOBAL_PRESS_str=",".join([str(vk) for  vk in GLOBAL_PRESS])
@@ -525,7 +519,7 @@ class App(QWidget):
         super().leaveEvent(event)
 
 
-from src.hotkeys_utils.response_key import GLOBAL_PRESS, listener
+
 if __name__ == '__main__':
     app=QApplication(sys.argv)
     QApplication.setStyle(QStyleFactory.create("Fusion"));

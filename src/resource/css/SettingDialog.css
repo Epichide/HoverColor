@@ -1,7 +1,9 @@
 /* 主对话框样式，注意原选择器#Setting Dialog有空格，正确应为#SettingDialog（假设对象名为SettingDialog ）*/
+
+
 SettingDialog {
     background-color: #ffffff; /* 主对话框背景改为白色 */
-
+    font-size: 13px;
 }
 
 /* 按钮框样式 */
@@ -21,11 +23,13 @@ QDialog {
 }
 ScrollSubTab {
     background-color: #ffffff;
-    border: 1px solid #bce0f9;/* 标签边框 */
+    border: 1px solid #A0C3DC;/* 标签边框 */
     padding: 10px;
+    font-size: 13px;
 }
 /* 设置 ScrollSubTab 内的 QWidget 背景为白色 */
 ScrollSubTab QWidget {
+    font-size: 13px;
     background-color: #ffffff;
 }
 
@@ -39,9 +43,9 @@ QTabWidget::tab-bar {
 }
 
 QTabBar::tab {
-    background-color: #e9f5ff; /* 标签未选中时背景，匹配浅蓝风格 */
+    background-color: #DBE7F1; /* 标签未选中时背景，匹配浅蓝风格 */
     color: #333;              /* 标签文字颜色 */
-    border: 1px solid #bce0f9;/* 标签边框 */
+    border: 1px solid #A0C3DC;/* 标签边框 */
     border-bottom: none;     /* 底部无边框，避免与内容区重叠 */
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
@@ -55,21 +59,35 @@ QTabBar::tab:selected {
 }
 
 QTabWidget::pane {
-    border: 1px solid #bce0f9; /* 内容区边框，和表格、标签栏统一 */
+    border: 1px solid #A0C3DC; /* 内容区边框，和表格、标签栏统一 */
     border-radius: 4px;
     margin-top: 1px; /* 与标签栏底部贴合，视觉更连贯 */
 }
+QLabel {
 
+    spacing: 4px;
+    font-family:  "Arial"; /* 字体调整，适应截图风格 */
+    font-size: 13px; /* 字体大小调整，适应截图风格 */
+}
+
+QRadioButton {
+
+    spacing: 4px;
+    font-family:  "Arial"; /* 字体调整，适应截图风格 */
+    font-size: 13px; /* 字体大小调整，适应截图风格 */
+}
 QRadioButton::indicator::unchecked{
-    border: 1px solid #bce0f9;
+    border: 1px solid #A0C3DC;
     border-radius: 6px;
     background-color: white;
+
 
 
 }
 
 /* 滚动条整体样式 */
 QScrollBar:vertical {
+
     background-color: #f5f7fa;
     border: 1px solid gray;
     width: 8px;
@@ -85,13 +103,13 @@ QScrollBar:horizontal {
 
 /* 滚动条滑块样式 */
 QScrollBar::handle:vertical {
-    background-color: #bce0f9;
+    background-color: #A0C3DC;
     border-radius: 4px;
     min-height: 20px;
 }
 
 QScrollBar::handle:horizontal {
-    background-color: #bce0f9;
+    background-color: #A0C3DC;
     border-radius: 4px;
     min-width: 20px;
 }
@@ -122,7 +140,7 @@ QScrollBar::add-page:horizontal {
 /* 滚动条交叉角落区域样式 */
 QScrollArea QAbstractScrollArea::corner,
 QAbstractScrollArea::corner {
-    background-color: #bce0f9; /* 与滚动条背景色一致 */
+    background-color: #A0C3DC; /* 与滚动条背景色一致 */
     border: 1px solid gray; /* 可选：添加边框与其他元素呼应 */
 }
 

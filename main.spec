@@ -5,7 +5,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ("src/resource/**/*", "resource"),  # 递归包含所有资源文件
+        ("src/resource", "resource"),  # 递归包含所有资源文件
     ],
     hiddenimports=[],
     hookspath=[],

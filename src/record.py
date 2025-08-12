@@ -17,8 +17,7 @@ from PyQt5.QtWidgets import (QAbstractItemView, QGridLayout, QVBoxLayout, QWidge
                              QApplication, QMenu, QAction, QMessageBox)
 
 from src.basepanel import BaseWidget
-def _get_file(relative_path):
-    return os.path.abspath(os.path.join(os.path.dirname(__file__),relative_path))
+from .utils.file_utils import _get_file
 
 class ColorSpaceGroup(QtWidgets.QGroupBox):
     metric_choose_signal = pyqtSignal(list) # colorspce, metric

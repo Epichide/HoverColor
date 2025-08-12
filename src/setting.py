@@ -6,41 +6,34 @@
 # @File: setting.py
 # @Software: PyCharm
 import os
-from typing import List
 
-import pandas as pd
+
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
-from PyQt5.QtCore import QEventLoop, Qt
+from PyQt5.QtCore import Qt
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-import sys
 from PyQt5.QtWidgets import (
-    QApplication, QDialog, QRadioButton, QTableWidgetItem, QWidget, QVBoxLayout, QGroupBox, QGridLayout, QLabel,
-    QFileDialog,
+    QDialog, QRadioButton, QTableWidgetItem, QGroupBox, QGridLayout, QFileDialog,
     QHBoxLayout,
     QMessageBox, QTabWidget
 )
 
-import numpy as np
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout)
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
-from matplotlib.widgets import Cursor
 
-from src.basepanel import BaseWidget
-from src.color_utils.iccinspector import get_plot_xy, iccProfile, show_result, update_custom_icc
-from src.record import RecordForm
+from .color_utils.iccinspector import iccProfile
+from .record import RecordForm
 from .color_utils.color_utils import *
-from .hotkeys_utils.hotkey_wid import HotKeyWindow, HotkeyPicker
+from .wid_utils.hotkeys_utils.hotkey_wid import HotKeyWindow
+from .utils.file_utils import _get_file
 
 # 设置 matplotlib 支持中文显示
 plt.rcParams["font.family"] = ["SimHei"]
 plt.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题
-def _get_file(relative_path):
-    return os.path.abspath(os.path.join(os.path.dirname(__file__),relative_path))
 class ScrollSubTab(QtWidgets.QScrollArea):
     def __init__(self,parent=None):
         super(ScrollSubTab,self).__init__(parent)
@@ -50,7 +43,7 @@ class ScrollSubTab(QtWidgets.QScrollArea):
         self.setMinimumWidth(100)
         self.info_scroll_wid = QtWidgets.QWidget(self)
         # self.info_scroll_wid 居中
-        self.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)  # 设置滚动区域的对齐方式
+        self.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter|QtCore.Qt.AlignTop )  # 设置滚动区域的对齐方式
 
         self.setWidget(self.info_scroll_wid)
         self.info_scroll_wid.setSizePolicy(
@@ -60,7 +53,7 @@ class ScrollSubTab(QtWidgets.QScrollArea):
         # 创建布局并设置对齐方式（布局才有 setAlignment 方法）
         layout = QVBoxLayout(self.info_scroll_wid)  # 布局直接关联到 info_scroll_wid
         # layout.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)  # 布局内控件的对齐方式
-
+        layout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
 
         self.widget().setLayout(layout)
 
@@ -276,7 +269,7 @@ class MplGamutCanvas(FigureCanvas):
                 x, y + 0.02,
                 f"({x:.2f}, {y:.2f})",
                 color=colors[i],
-                fontsize=11,
+                fontsize=12,
                 ha="center", va="center"
             )
             self.point_texts.append(tex)
@@ -296,7 +289,7 @@ class MplGamutCanvas(FigureCanvas):
             wp_xy[0], wp_xy[1] + 0.05,
                       wpname + f"({wp_xy[0]:.2f}, {wp_xy[1]:.2f})",
             color="black",
-            fontsize=11,
+            fontsize=12,
             ha="center",
             va="center"
         )
@@ -410,9 +403,17 @@ class MplGamutCanvas(FigureCanvas):
 
     def plot_wavelength_curve(self):
         """绘制曲线"""
-        xyz_cc = pd.read_csv(_get_file('./resource/CIEdata/cie_1931_2deg_xyz_cc.csv'), index_col=0)
-        xy = xyz_cc[['x', 'y']]
-        r, c = xy["x"].values, xy["y"].values
+
+        data = np.genfromtxt(
+            _get_file('./resource/CIEdata/cie_1931_2deg_xyz_cc.csv'),
+            delimiter=',',  # 分隔符为逗号
+            # skip_header=1,  # 跳过表头行
+            dtype=None,  # 自动推断数据类型
+            encoding='utf-8',  # 指定编码
+            names=True  # 使用第一行作为字段名
+        )
+
+        r, c = data['x'], data['y']
         r = np.append(r, r[0])
         c = np.append(c, c[0])
         # r = np.int16(np.round(r * x_max))
@@ -814,24 +815,6 @@ class ICCProfile(QWidget):
         self.profile_info = {}
         self.radio=None
 
-        self.setStyleSheet("""
-                                   QLabel[objectName="RowLabel"] {
-                                    border-top: 0px dashed #999;   /* 上边框 */
-                                    border-bottom: 1px solid #999;/* 下边框 */
-                                    padding: 5px 0;                /* 上下内边距，左右0避免内容贴边 */
-                                    margin: 0;                     /* 去除外边距，避免额外间隙 */
-                                    height: 10px;  /* 设置高度 */
-                                    min-height: 5px;  /* 最小高度（确保不小于此值） */
-                                    max-height: 20px;  /* 最大高度（确保不大于此值） */
-                                }
-                                QGroupBox {
-                                    font-weight: bold;  /* 修正了分号和引号错误 */
-                                    font-family: Arial; /* 明确指定字体 */
-                                    font-size: 10px;    /* 修正了中文冒号为英文冒号 */
-                                }
-                                    font: Arial;
-                                    font-size： 10px;
-                                """)
         self.init_ui()
 
     def init_info_ui(self):
@@ -1138,7 +1121,7 @@ class SettingDialog(QtWidgets.QDialog):
         self.verticalLayout.addWidget(self.buttonBox)
         self.setLayout(self.verticalLayout)
         # 设置默认字体
-        self.setFont(QtGui.QFont("Arial", 10))
+
     def accept(self):
         self.metrics=self.metric_wid.get_metrics()
         self.hot_keys = self.hotkey_wid.get_hot_keys()[1] #  funcname: qtkeys
@@ -1243,6 +1226,7 @@ class SettingDialog(QtWidgets.QDialog):
         gamut_grids_wid = QtWidgets.QWidget(self)
         # 设置部件的大小策略，允许垂直方向扩展
         gamut_grids = QtWidgets.QGridLayout(self)
+        gamut_grids.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
         gamut_grids_wid.setSizePolicy(
             QtWidgets.QSizePolicy.Preferred,  # 水平方向保持默认
             QtWidgets.QSizePolicy.MinimumExpanding    # 垂直方向根据内容调整

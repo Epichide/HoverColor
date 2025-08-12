@@ -8,10 +8,11 @@
 import math
 import  sys,os
 
-
+from PIL import Image
 
 try:
-    from .color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
+    from .utils.file_utils import _get_file
+    from .color_utils.color_utils import color_Lab_to_Lch, color_Lab_to_RGB, color_RGB_to_Lab
 except:
     from color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
 
@@ -33,7 +34,7 @@ class LabChart(HueChart):
         self.metrics={
             "Lab":0,
             "ΔE2000":0,
-            # "Lch":0
+            "Lch":0
         }
         self.metric = "ΔE2000"
         self.gamut= gamut
@@ -169,6 +170,9 @@ class LabChart(HueChart):
         deltaE=self.get_deltaE()
         self.metrics["Lab"]=[round(v,2), round(la,2), round(lb,2)]
         self.metrics["ΔE2000"]=np.round(deltaE,4)
+        lch=color_Lab_to_Lch(np.array([v,la,lb]))
+        l,c,h=lch
+        self.metrics["Lch"]=[round(l,2), round(c,2), round(h,2)]
         self.pos_value_signal.emit(self.metrics)
         return v,la,lb
 
@@ -205,8 +209,10 @@ def create_lab_proj(nsize=500,initial=50):
         img_plane=create_lab_img(l=v,nsize=nsize)
         new_mask=img_plane[:,:,-1]>img[:,:,-1]
         img[new_mask]=img_plane[new_mask]
-    from  skimage import  io
-    io.imsave(str(mid)+"_lab_proj_0-100.png",img)
+    if img.dtype != np.uint8:
+        img = (img * 255).astype(np.uint8)  # 若原图在[0,1]范围，需转换为[0,255]
+    # 转换为PIL图像并保存
+    Image.fromarray(img).save(str(mid)+"_lab_proj_0-100.png")
 def create_lab_img_cus(l=50,nsize=500,gamut="P3-D65"):
     x=np.linspace(-1,1,nsize)
     y=np.linspace(-1,1,nsize)
@@ -217,7 +223,6 @@ def create_lab_img_cus(l=50,nsize=500,gamut="P3-D65"):
     arr[:,:,0]=l
     arr[:,:,1]=A*180
     arr[:,:,2]=B*180
-    from  skimage import color
     rgb=color_Lab_to_RGB(arr,gamut=gamut)
     A5=np.isnan(rgb)
     # rgb=rgb.clip(0,1)
@@ -241,8 +246,7 @@ def create_lab_img_cus(l=50,nsize=500,gamut="P3-D65"):
     # io.imsave(str(l) + "_lab_proj_0-100.png", img)
     return img
 def create_lab_proj_cus(nsize=500,initial=80,gamut="P3-D65"):
-    def _get_file(relative_path):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), relative_path))
+
     img=np.zeros([nsize,nsize,4],dtype=np.uint8)
     mid=initial
     for v in range(mid,0,-1):
@@ -253,9 +257,14 @@ def create_lab_proj_cus(nsize=500,initial=80,gamut="P3-D65"):
         img_plane=create_lab_img_cus(l=v,nsize=nsize,gamut=gamut)
         new_mask=img_plane[:,:,-1]>img[:,:,-1]
         img[new_mask]=img_plane[new_mask]
-    from  skimage import  io
+
     outfile=_get_file(os.path.join("resource","Lab",str(mid)+f"_lab_proj_0-100_{gamut}.png"))
-    io.imsave(outfile,img)
+    # 若图像是numpy数组，需确保数据类型正确（通常为uint8）
+    if img.dtype != np.uint8:
+        img = (img * 255).astype(np.uint8)  # 若原图在[0,1]范围，需转换为[0,255]
+    # 转换为PIL图像并保存
+    Image.fromarray(img).save(outfile)
+
 
 if __name__ == '__main__':
     # create_lab_proj_cus(500,80,gamut="P3-D65")

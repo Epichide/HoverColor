@@ -7,11 +7,12 @@
 # @Software: PyCharm
 #ref1:https://www.jianshu.com/p/854ca5f13ce6
 #ref2:https://zhajiman.github.io/post/chromaticity_diagram/#%E6%9C%80%E7%BB%88%E6%95%88%E6%9E%9C
-
+from PIL import Image
 
 from src.color_utils.color_utils import color_RGB_to_XYZ, color_XYZ_to_RGB, color_XYZ_to_xyY, color_xyY_to_XYZ
 import math
 import  sys,os
+from .utils.file_utils import _get_file
 
 
 try:
@@ -54,7 +55,9 @@ class XYZChart(HueChart):
     def load_xy_img(self):
         nsize=500
         import os
-        filename = os.path.join("src","resource", "XYZ",  f"CIE_1931_chromaticity_diagram_{self.gamut}.png")
+
+        filename=_get_file(os.path.join("resource", "XYZ",  f"CIE_1931_chromaticity_diagram_{self.gamut}.png"))
+
 
         print(os.path.abspath(filename))
         qpix=QPixmap(filename).scaled(self.hue.width()-1,self.hue.height()-1)
@@ -97,11 +100,8 @@ class XYZChart(HueChart):
 
 def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
     import numpy as np
-    import pandas as pd
-    from skimage import io
-    from skimage.draw import line
-    def _get_file(relative_path):
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), relative_path))
+
+
 
     # RGB Rectangle
     y_max = int(nsize / 0.85)
@@ -129,27 +129,29 @@ def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
 
     # load CIE xyz CMF curve
 
-    xyz_cc = pd.read_csv(_get_file('./resource/CIEdata/cie_1931_2deg_xyz_cc.csv'), index_col=0)
-    xy = xyz_cc[['x', 'y']]
-    r, c = xy["x"].values, xy["y"].values
+    # 读取CSV文件
+    # 使用genfromtxt，跳过表头，自动处理数据类型
+    data = np.genfromtxt(
+        _get_file('./resource/CIEdata/cie_1931_2deg_xyz_cc.csv'),
+        delimiter=',',  # 分隔符为逗号
+        # skip_header=1,  # 跳过表头行
+        dtype=None,  # 自动推断数据类型
+        encoding='utf-8',  # 指定编码
+        names=True  # 使用第一行作为字段名
+    )
+
+
+    r, c = data['x'], data['y']
     r = np.int16(np.round(r * x_max))
     c = np.int16(np.round(c * y_max))
+    c= nsize-c  # invert y axis
 
     img = np.concatenate([img, AP], axis=2)
     # draw poly lines
     mask= np.zeros((nsize, nsize), dtype=bool)
-    for i in range(len(r) - 1):
-        rr, cc = line(r[i], c[i], r[i + 1], c[i + 1])
-        cc = nsize - cc
-        mask[cc, rr] = 1
-    # draw the last line to close the polygon
-    rr, cc = line(r[-1], c[-1], r[0], c[0])
-    cc = nsize - cc
-    mask[cc, rr] = 1
-    #dilation
-    from skimage.morphology import binary_dilation
-    from skimage.morphology import disk
-    mask = binary_dilation(mask, disk(2))
+    mask=plot_close_line(c,r, mask,thickness=4)
+
+
     img[mask]=[0,0,0,255]
 
     area = np.sum(A2)
@@ -157,7 +159,102 @@ def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
     # plt.show()
 
     outfile=_get_file(os.path.join("resource","XYZ",f"CIE_1931_chromaticity_diagram_{gamut}.png"))
-    io.imsave(outfile,img)
+    if img.dtype != np.uint8:
+        img = (img * 255).astype(np.uint8)  # 若原图在[0,1]范围，需转换为[0,255]
+    # 转换为PIL图像并保存
+    Image.fromarray(img).save(outfile)
+
+
+def bresenham_line(x0, y0, x1, y1):
+    """Bresenham线段算法，返回线段上所有点的坐标"""
+    rows = []
+    cols = []
+
+    dx = x1 - x0
+    dy = y1 - y0
+
+    sx = 1 if dx > 0 else -1 if dx < 0 else 0
+    sy = 1 if dy > 0 else -1 if dy < 0 else 0
+
+    dx = abs(dx)
+    dy = abs(dy)
+
+    x, y = x0, y0
+    rows.append(y)
+    cols.append(x)
+
+    # 处理特殊情况：水平线或垂直线
+    if dx == 0:  # 垂直线
+        while y != y1:
+            y += sy
+            rows.append(y)
+            cols.append(x)
+        return np.array(rows), np.array(cols)
+    if dy == 0:  # 水平线
+        while x != x1:
+            x += sx
+            rows.append(y)
+            cols.append(x)
+        return np.array(rows), np.array(cols)
+
+    # 通用情况
+    err = dx - dy
+    while x != x1 or y != y1:
+        e2 = 2 * err
+        if e2 > -dy:
+            err -= dy
+            x += sx
+        if e2 < dx:
+            err += dx
+            y += sy
+        rows.append(y)
+        cols.append(x)
+
+    return np.array(rows), np.array(cols)
+
+
+def plot_close_line(r, c, mask,thickness=2):
+    """
+    绘制闭合多边形线段，返回布尔型掩码
+    参数:
+        r: 多边形顶点的行坐标列表
+        c: 多边形顶点的列坐标列表
+        nsize: 掩码尺寸（nsize x nsize）
+    返回:
+        mask: 布尔型掩码数组，线段位置为True
+    """
+    # 验证输入
+    if len(r) != len(c):
+        raise ValueError("r和c的长度必须相同")
+    if len(r) < 2:
+        raise ValueError("至少需要2个顶点才能形成闭合多边形")
+
+
+    nsizeh, nsizew = mask.shape[:2]
+    # 绘制多边形各边
+    for i in range(len(r) - 1):
+        rr, cc = bresenham_line(r[i], c[i], r[i + 1], c[i + 1])
+        # 过滤超出边界的坐标
+
+        valid = (cc >= 0) & (cc < nsizeh) & (rr >= 0) & (rr < nsizew)
+        mask[cc[valid], rr[valid]] = True  # 布尔型赋值
+
+
+    rr, cc = bresenham_line(r[-1], c[-1], r[0], c[0])
+
+
+    valid = (cc >= 0) & (cc < nsizeh) & (rr >= 0) & (rr < nsizew)
+    mask[cc[valid], rr[valid]] = True
+    cc,rr=np.where(mask)
+    # 绘制线段的厚度
+    for i in range(-thickness // 2, thickness // 2 + 1):
+        if i == 0:
+            continue
+        mask[cc + i, rr] = True
+        mask[cc, rr + i] = True
+
+    return mask
+
 
 if __name__ == '__main__':
     # create_xyz_proj_cus(gamut="P3-D65")
