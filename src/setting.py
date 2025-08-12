@@ -10,7 +10,7 @@ import os
 
 # !/usr/bin/env python
 # -*- coding: utf-8 -*-
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QSize, Qt
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -113,7 +113,7 @@ class MplCanvas(FigureCanvas):
         """重写 resizeEvent，确保画布大小变化时图形自动调整"""
         super().resizeEvent(event)
         # 手动触发布局调整（可选，增强自适应效果）
-
+        self.axes.set_aspect('equal', adjustable='box')
         self.draw()
     def clear(self):
         # only clear curve and point
@@ -184,6 +184,7 @@ class MplGamutCanvas(FigureCanvas):
         self.fig = Figure(constrained_layout=True, dpi=dpi)
         self.axes = self.fig.add_subplot(111)
         self.rectangle = None
+
 
         self.rectangle_points = []  # 存储基色点的独立散点对象
         self.wp_point = None
@@ -430,9 +431,21 @@ class MplGamutCanvas(FigureCanvas):
         self.draw()  # 刷新画布
 
     def resizeEvent(self, event):
-        # 保持原有实现
+        """重写 resizeEvent，确保画布大小变化时图形自动调整"""
+        # 计算新的尺寸，保持1:1比例
+        # new_size = min(event.size().width(), event.size().height())
+        # event_size = QSize(new_size, new_size)
+        #
+        # # 应用新尺寸
+        # self.setFixedSize(event_size)
+
+        # 调用父类方法处理布局
         super().resizeEvent(event)
-        # self.fig.tight_layout()
+
+        # 调整坐标轴比例为1:1
+        self.axes.set_aspect('equal', adjustable='box')
+
+        # 刷新画布
         self.draw()
 
 class ICCTable(QtWidgets.QTableWidget):
@@ -884,6 +897,8 @@ class ICCProfile(QWidget):
         # 主布局
         self.main_layout = QHBoxLayout()
         self.setFixedHeight(450)
+
+        # self.setFixedHeight(450)
         self.sp = QtWidgets.QSplitter(Qt.Horizontal)
         self.main_layout.addWidget(self.sp)
         self.setLayout(self.main_layout)
@@ -943,6 +958,10 @@ class ICCProfile(QWidget):
                 for val in value:
                     self.WP_table.setItem(row, 1, str(val))
                     row+=1
+            elif isinstance(value, dict):
+                for k, v in value.items():
+                    self.WP_table.setItem(row, 1, f"{k} = {v}")
+                    row += 1
             else:
                 self.WP_table.setItem(row,1,str(value))
                 row += 1
@@ -1233,7 +1252,10 @@ class SettingDialog(QtWidgets.QDialog):
         )
         gamut_grids.addWidget(gamut_label, 0, 0)
         gamut_grids_wid.setLayout(gamut_grids)
-
+        gamut_grids_wid.setSizePolicy(
+            QtWidgets.QSizePolicy.MinimumExpanding,  # 水平方向保持默认
+            QtWidgets.QSizePolicy.Minimum  # 垂直方向根据内容调整
+        )
         layout.addWidget(gamut_grids_wid)
         self.gamut_info = ICCProfile(self)
         layout.addWidget(self.gamut_info)

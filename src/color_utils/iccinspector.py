@@ -1972,10 +1972,12 @@ def get_near_illuminant(xy_value):
     WP_Illuminant=None
     min_dis=1
     for illuminant,illuminant_xy in White_ILLUMINANTS_xy.items():
+        if illuminant=="CUSTOM":continue
         dis=np.linalg.norm(xy_value-illuminant_xy)
         if dis<min_dis:
             min_dis=dis
             WP_Illuminant=illuminant
+
     if WP_Illuminant is  not None:
         WP_Illuminant = "Near "+WP_Illuminant
     return WP_Illuminant
