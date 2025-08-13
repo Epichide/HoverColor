@@ -21,13 +21,13 @@ from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon,QPainter, QImage, QPixmap,QMouseEvent, QCursor
 
 try:
-    from .hue import  HueChart
+    from .hue import  HueChart,BaseWidget
 except:
-    from  hue import  HueChart
+    from  hue import  HueChart,BaseWidget
 class LabChart(HueChart):
 
     def __init__(self,parent=None,mode="hsv",gamut="P3-D65"):
-        super().__init__(parent)
+        BaseWidget.__init__(self,parent)
         self.Lab_1 = None
         self.Lab_2 = None
         self.colorspace = "Lab"
@@ -38,15 +38,20 @@ class LabChart(HueChart):
         }
         self.metric = "ΔE2000"
         self.gamut= gamut
-        self.create_background()
+        self.init_ui()
+        self.get_suggest_size(parent)
+        self.set_zoom_size(1)
+    def set_zoom_size(self, ratio=1):
+        super().set_zoom_size(ratio)
+        self.hue.setObjectName("lab")
+        self.hue.setStyleSheet("""
+                        border-style: outset; border-width: 0px; border-radius: 0px;
+                        """)
     def create_background(self):
         self.load_lab_img()
     def load_lab_img(self):
         nsize=500
-        import os
-        filename = os.path.join("src","resource", "Lab",  f"80_lab_proj_0-100_{self.gamut}.png")
-
-        print(os.path.abspath(filename))
+        filename=_get_file( os.path.join("resource", "Lab",  f"80_lab_proj_0-100_{self.gamut}.png"))
         qpix=QPixmap(filename).scaled(self.hue.width()-1,self.hue.height()-1)
         painter=QPainter(qpix)
         painter.setPen((QColor(0,0,0)))
@@ -165,7 +170,8 @@ class LabChart(HueChart):
         self.hue_cur.move(self.pie_center-QPoint(dx,dy))
 
         color_string = ",".join([str(r), str(g), str(b)])
-        self.hue_cur.setStyleSheet("Qlabel{background-color: rgb(" + color_string + ");}")
+        # self.hue_cur.setStyleSheet("Qlabel{background-color: rgb(" + color_string + ");}")
+        self.hue_cur.setStyleSheet("border-width: 1px;\n")
         self.Lab_2=[v,la,lb]
         deltaE=self.get_deltaE()
         self.metrics["Lab"]=[round(v,2), round(la,2), round(lb,2)]

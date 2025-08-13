@@ -3,7 +3,7 @@ import  sys,os
 import numpy as np
 from PyQt5.QtCore import QEventLoop, Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor, QIcon, QCursor
-from PyQt5.QtWidgets import QCheckBox, QDialog, QLabel, QSpinBox, QStyleFactory, QWidget, \
+from PyQt5.QtWidgets import QActionGroup, QCheckBox, QDialog, QLabel, QSpinBox, QStyleFactory, QWidget, \
     QHBoxLayout, \
     QApplication, \
     QMenu, \
@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QCheckBox, QDialog, QLabel, QSpinBox, QStyleFactory,
     QWidgetAction
 #from src.color_platte import get_average_clor
 from src.RGB import RGBBar
+from src.YUV import YUVChart
 from src.Lab import LabChart
 # from src.Jch import JchChart
 from src.XYZ import XYZChart
@@ -47,6 +48,8 @@ class App(QWidget):
         for wid in self.bar_widgets:
             if hasattr(wid,"set_zoom_size"):
                 wid.set_zoom_size(ratio)
+        if self.record:
+            self.record.set_zoom_size(ratio)
         self.update_width()
     def set_font_size(self,value):
         self.record.set_font_size(value)
@@ -97,15 +100,16 @@ class App(QWidget):
 
         self.rgb_bar=RGBBar(self)
         self.lab_bar=LabChart(self)
+        self.yuv_bar=YUVChart(self)
         # self.jch_bar=JchChart(self)
-        self.hsv_bar=HueChart(self,"hsv")
-        self.XYZ_bar=XYZChart(self,"XYZ")
+        self.hsv_bar=HueChart(self)
+        self.XYZ_bar=XYZChart(self)
 
         self.record=RecordForm(self)
 
         self.Glayout=DynamicGridLayout(self)
         self.bar_widgets=[self.rgb_bar,self.hsv_bar,
-                          self.lab_bar,self.XYZ_bar]#self.jch_bar,
+                          self.lab_bar,self.XYZ_bar,self.yuv_bar]#self.jch_bar,
         self.setLayout(self.Glayout)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.contextMenuPolicy()
@@ -130,6 +134,8 @@ class App(QWidget):
             self.register_action(bar_wid,self.submenu_palette,bar_wid.colorspace)
             self.record.connect_wid(bar_wid)
 
+        self.gamut_action_group = QActionGroup(self)
+        self.gamut_action_group.setExclusive(True)  # 设为互斥模式（单选）
         for gamut in self.gamuts:
             self.register_gamut_action(self.submenu_gamut,gamut)
         self.menu.addMenu(self.submenu_palette)
@@ -188,12 +194,13 @@ class App(QWidget):
         act = QAction(gamut, self)
         act.setCheckable(True)
         submenu.addAction(act)
+        self.gamut_action_group.addAction(act)
         self.gamut_keys[gamut] = act
         act.triggered.connect(lambda: self.set_gamut(gamut))
 
     def set_gamut(self,gamut="P3-D65"):
-        for tgamut, act in self.gamut_keys.items():
-            act.setChecked(False)
+        # for tgamut, act in self.gamut_keys.items():
+        #     act.setChecked(False)
         act = self.gamut_keys[gamut]
         act.setChecked(True)
         self.cur_gamut=gamut
@@ -219,6 +226,13 @@ class App(QWidget):
         # act.setCheckable(True)
         submenu_palette_checkbox=QCheckBox(self.submenu_palette)
         submenu_palette_checkbox.setText(name)
+        # submenu_palette_checkbox.setStyleSheet("""
+        #         QCheckBox {
+        #             margin: 2px 4px 2px 6px;  /* 上 右 下 左 */
+        #             /* 可选：添加其他样式 */
+        #             padding: 3px;
+        #         }
+        #     """)
         act.setDefaultWidget(submenu_palette_checkbox)
         if submenu is None:
             self.menu.addAction(act)
@@ -243,8 +257,8 @@ class App(QWidget):
         # 添加伸缩项，将SpinBox推到右侧
         # hbox.addStretch(5)  # 这会占据左侧所有可用空间，将SpinBox挤到右边
         # 清除布局边距
-        hbox.setContentsMargins(0, 0, 0, 0)
-        qwid.setContentsMargins(0, 0, 0, 0)
+        hbox.setContentsMargins(3, 0, 0, 0)
+        qwid.setContentsMargins(3, 0, 0, 0)
 
         # 将SpinBox添加到布局
         spin_box = QSpinBox(qwid)
@@ -264,7 +278,7 @@ class App(QWidget):
     def register_scale_action(self,submenu=None):
         zoom_box=self.create_spin_action("zoom",vmin=25,vmax=225,step=10,submenu=submenu)
         font_box=self.create_spin_action("font",vmin=2,vmax=70,step=1,submenu=submenu)
-        lock_btn=self.create_spin_action("lock",vmin=0,vmax=100,step=1,submenu=submenu)
+        lock_btn=self.create_spin_action("alpha",vmin=0,vmax=100,step=1,submenu=submenu)
 
         return zoom_box,font_box,lock_btn
 
@@ -522,7 +536,7 @@ class App(QWidget):
 
 if __name__ == '__main__':
     app=QApplication(sys.argv)
-    QApplication.setStyle(QStyleFactory.create("Fusion"));
+    QApplication.setStyle(QStyleFactory.create("Fusion"))
     listener.start()
     # QtCore.QCoreApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     ex=App()

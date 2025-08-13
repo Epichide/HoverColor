@@ -25,9 +25,9 @@ from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon,QPainter, QImage, QPixmap,QMouseEvent, QCursor
 
 try:
-    from .hue import  HueChart
+    from .hue import  HueChart,BaseWidget
 except:
-    from  hue import  HueChart
+    from  hue import  HueChart,BaseWidget
 class XYZChart(HueChart):
     def set_zoom_size(self, ratio=1):
         super().set_zoom_size(ratio)
@@ -35,9 +35,9 @@ class XYZChart(HueChart):
         self.hue.setStyleSheet("""
                         border-style: outset; border-width: 0px; border-radius: 0px;
                         """)
-    def __init__(self,parent=None,mode="XYZ",gamut="P3-D65"):
+    def __init__(self,parent=None,gamut="P3-D65"):
 
-        super().__init__(parent, mode=mode)
+        BaseWidget.__init__(self,parent)
         self.XYZ_1 = None
         self.XYZ_2 = None
         self.colorspace = "XYZ"
@@ -47,8 +47,10 @@ class XYZChart(HueChart):
         }
         self.metric = ""
         self.gamut= gamut
+        self.init_ui()
+        self.get_suggest_size(parent)
+        self.set_zoom_size(1)
 
-        self.create_background()
 
     def create_background(self):
         self.load_xy_img()

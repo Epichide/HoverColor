@@ -1209,10 +1209,10 @@ class SettingDialog(QtWidgets.QDialog):
         # 使用传入的text参数，而不是固定文本
         lab.setText(f"<b> {text}:</b>")
         # 增加内边距让文字不贴边，更美观
-        lab.setStyleSheet("QLabel { "
-                          "background-color: gray; "
-                          "color: white; "
-                          "padding: 2px 8px; }")
+        # lab.setStyleSheet("QLabel { "
+        #                   "background-color: gray; "
+        #                   "color: white; "
+        #                   "padding: 2px 8px; }")
         # 设置水平扩展，垂直固定
         size_policy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         lab.setSizePolicy(size_policy)

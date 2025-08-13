@@ -16,6 +16,15 @@ example
     reset : ctrl + 0
 
 ## update log
+- 20250813
+  - add YUV,YCbcr,YPbPr
+    - YUV,YCbcr,YPbPr are all YUV color model(YUV model also have a transform version called YUV(from PAL)) 
+    - YUV  and YPbPr have similar transformation. YPbPr comes after YUV and special for digital dispaly devices
+    - [YCbcr is a digital format of YPbPr](https://fujiwaratko.sakura.ne.jp/infosci/colorspace/colorspace4_e.html). YPbPr is range from (Y:0, PbPr:-0.5) to (Y:1, PbPr:0.5) , while YCbCr is range from (Y:16,CbCr:16) to (Y:235,CbCr:240)
+    - ref : 
+      - [wiki:YCbCr](https://en.wikipedia.org/wiki/YCbCr#R'G'B'_to_Y%E2%80%B2PbPr)
+      - [wki:YUV](https://en.wikipedia.org/wiki/Y%E2%80%B2UV)
+      
 - 20250810
   - Custom Record
   - Parse and load ICC profile 

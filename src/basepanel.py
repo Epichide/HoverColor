@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import  QWidget,QHBoxLayout,QApplication,QMenu,QAction,QMes
 class BaseWidget(QWidget):
 
     pos_value_signal=pyqtSignal(dict)
-    def __init__(self,parent=None,mode="hsv"):
+    def __init__(self,parent=None):
         super().__init__(parent)
         self.colorspace = ""
         self.metrics={}

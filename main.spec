@@ -6,6 +6,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ("src/resource", "resource"),  # 递归包含所有资源文件
+        ("src/icon/icon.png", "icon/icon.png"),  # 递归包含所有资源文件
     ],
     hiddenimports=[],
     hookspath=[],

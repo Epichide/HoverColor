@@ -833,16 +833,140 @@ def color_HSV_to_RGB(hsv):
 
     return rgb.reshape(orig_shape)
 
+# --- RGB-YUV----
+WEIGHTS_YPBPR_rbuv = {
+
+    # YPBPR : Kr,Kb, not r,g,b
+    # https://en.wikipedia.org/wiki/YCbCr#R'G'B'_to_Y%E2%80%B2PbPr
+    "ITU-R-BT.601": np.array([0.2990, 0.1140,0.5,0.5]),  # YPBPR
+    "ITU-R-BT.709": np.array([0.2126, 0.0722,0.5,0.5]),  # YPBPR
+    "ITU-R-BT.2020": np.array([0.2627, 0.0593,0.5,0.5]),  # YPBPR
+    "SMPTE-240M": np.array([0.2122, 0.0865,0.5,0.5]),  # YPBPR
+
+    # YUV : Kr,Kb,Umax,Vmax
+    # https://en.wikipedia.org/wiki/Y%E2%80%B2UV#HDTV_with_BT.709
+    #  Y′, U, and V respectively are [0, 1], [−Umax, Umax], and [−Vmax, Vmax].
+    "SDTV-with-BT.470": np.array([0.2990, 0.114, 0.436, 0.615]),  # YUV
+    "HDTV-with-BT.709": np.array([0.2126, 0.0722, 0.436, 0.615]),  # YUV
+
+}
+
+RGB_2_YPbPr_M_CACHE={
+
+}
+YPbPr_2_RGB_M_CACHE={
+
+}
+
+def get_RGB_2_YPbPr_M(criteria=""):
+    """
+    Get the matrix for converting RGB to YUV based on the specified criteria.
+    :param criteria: The criteria for the conversion (e.g., "ITU-R BT.601").
+    """
+    if criteria in RGB_2_YPbPr_M_CACHE:
+        return RGB_2_YPbPr_M_CACHE[criteria]
+    Kr,Kb,Umax,Vmax=WEIGHTS_YPBPR_rbuv[criteria]
+    Kg=1-Kr-Kb
+    d = Umax/(1 - Kb)
+    e =  Vmax/(1 - Kr)
+    print(criteria,Kr,Kg,Kb,d,e)
+    M = np.array([[Kr,Kg,Kb],
+                  [-Kr*d,-Kg*d,(1-Kb)*d],
+                [(1-Kr)*e,-Kg*e,-Kb*e]])
+    RGB_2_YPbPr_M_CACHE[criteria]=M
+    return M
+
+def get_YPbPr_2_RGB_M(criteria=""):
+    if criteria in YPbPr_2_RGB_M_CACHE:
+        return YPbPr_2_RGB_M_CACHE[criteria]
+    M= get_RGB_2_YPbPr_M(criteria)
+    Minv=np.linalg.inv(M)
+    YPbPr_2_RGB_M_CACHE[criteria]=Minv
+    return Minv
+
+
+def color_RGB_to_YPbPr(RGB,criteria="ITU-R BT.601"):
+    """
+     R′, G′, and B′ nominally range from 0 to 1
+     https://en.wikipedia.org/wiki/YCbCr#ITU-R_BT.2020_conversion
+    """
+    RGB=range01(RGB)
+    M= get_RGB_2_YPbPr_M(criteria)
+    YPbPr=matric_transform(M,RGB)
+    return  YPbPr
+def color_YPbPr_to_RGB(YPbPr,criteria="ITU-R BT.601"):
+    """
+    """
+    Minv=get_YPbPr_2_RGB_M(criteria)
+    RGB=matric_transform(Minv,YPbPr)
+    return  RGB
+def color_YPbPr_to_YCbCr(YPbPr):
+    """
+    Y, Cb, and Cr nominally range from 0 to 1
+    https://fujiwaratko.sakura.ne.jp/infosci/colorspace/colorspace4_e.html
+    """
+    nbit=8
+    max_nbit=2**nbit-1 # 255
+    min_max_Y_range=[16,235]
+    min_max_br_range=[16,240]
+    Y_offset=min_max_Y_range[0]
+    br_offset=(sum(min_max_br_range))/2
+    Y_scale=(min_max_Y_range[1]-min_max_Y_range[0])
+    br_scale=(min_max_br_range[1]-min_max_br_range[0])
+    Y=YPbPr[...,0]*Y_scale+Y_offset
+    Cb=br_scale*YPbPr[...,1]+br_offset
+    Cr=br_scale*YPbPr[...,2]+br_offset
+    YCbCr=np.stack([Y,Cb,Cr],axis=-1)
+    return  YCbCr
+
+def color_YCbCr_to_YPbPr(YCbCr):
+    nbit=8
+    max_nbit=2**nbit-1 # 255
+    min_max_Y_range=[16,235]
+    min_max_br_range=[16,240]
+    Y_offset=min_max_Y_range[0]
+    br_offset=(sum(min_max_br_range))/2
+    Y_scale=(min_max_Y_range[1]-min_max_Y_range[0])
+    br_scale=(min_max_br_range[1]-min_max_br_range[0])
+    Y=(YCbCr[...,0]-Y_offset)/Y_scale
+    Cb=(YCbCr[...,1]-br_offset)/br_scale
+    Cr=(YCbCr[...,2]-br_offset)/br_scale
+    YPbPr=np.stack([Y,Cb,Cr],axis=-1)
+    return  YPbPr
+
+
+def color_RGB_to_YCbCr(RGB,criteria="ITU-R-BT.601"):
+    """
+    https://www.poynton.ca/notes/colour_and_gamma/ColorFAQ.txt
+    """
+    YPbPr= color_RGB_to_YPbPr(RGB,criteria)
+    YCbCr=color_YPbPr_to_YCbCr(YPbPr)
+    return  YCbCr
+
+def color_YCbCr_to_RGB(YCbCr,criteria="ITU-R BT.601"):
+    YPbPr=color_YCbCr_to_YPbPr(YCbCr)
+    RGB=matric_transform(get_RGB_2_YPbPr_M(criteria).T,YPbPr)
+    return  RGB
+
+
+
+
 
 if __name__ == '__main__':
 
-    x1=np.linspace(0,1,100)
-    y1=Gamma_func_CACHE["CUSTOM"](x1)
-    y2=Degamma_func_CACHE["CUSTOM"](x1)
-    import matplotlib.pyplot as plt
-    plt.plot(x1, y1, label='deGamma')
-    plt.plot(y2,x1,label ="de")
-    plt.show()
+    for criteria in WEIGHTS_YPBPR_rbuv.keys():
+        # M=get_YPbPr_2_RGB_M(criteria)
+        M=get_RGB_2_YPbPr_M(criteria)
+        print(M)
+
+
+    # x1=np.linspace(0,1,100)
+    # y1=Gamma_func_CACHE["CUSTOM"](x1)
+    # y2=Degamma_func_CACHE["CUSTOM"](x1)
+    # import matplotlib.pyplot as plt
+    # plt.plot(x1, y1, label='deGamma')
+    # plt.plot(y2,x1,label ="de")
+    # plt.show()
     # get_XYZD65_to_AC1C2_M()
     # print(np.round(np.matrix(get_RGB2XYZ_M(gamut="sRGB")).I,3))
     # print(np.round(get_RGB2XYZ_M(gamut="P3-D65"),8))

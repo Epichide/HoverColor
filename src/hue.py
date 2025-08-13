@@ -6,10 +6,7 @@
 # @File: hue.py
 # @Software: PyCharm
 
-
-
 import numpy as np
-import skimage.color
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
 from PyQt5.QtGui import QCloseEvent, QColor, QIcon, QImage, QMouseEvent, QCursor
@@ -114,14 +111,18 @@ class HueChart(BaseWidget):
         self.pos_width=0.06*self.wid_width
 
 
-    def __init__(self,parent=None,mode="hsv",gamut="P3-D65"):
+    def __init__(self,parent=None):
         super().__init__(parent)
         self.colorspace = "HSV"
         self.metrics ={
             "HSV":0,
         }
         self.metric = ""
-        self.gamut=gamut
+        self.init_ui()
+        self.get_suggest_size(parent)
+        self.set_zoom_size(1)
+
+    def init_ui(self):
         self.hue=QLabel(self)
         self.hue.setFrameShape(QFrame.StyledPanel)
         self.hue.setFrameShadow(QFrame.Raised)
@@ -147,8 +148,7 @@ class HueChart(BaseWidget):
         self.hue_old2=self.add_pos_hue_widget(self.hue,"")
         self.luma_old1=self.add_pos_luma_widget(self.luma,"")
         self.luma_old2=self.add_pos_luma_widget(self.luma,"")
-        self.get_suggest_size(parent)
-        self.set_zoom_size(1)
+
     def create_background(self):
         self.create_hsv_img()
     def create_hsv_img(self):
