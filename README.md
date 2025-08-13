@@ -18,7 +18,7 @@ example
 ## update log
 - 20250813
   - add YUV,YCbcr,YPbPr
-  - YUV, YCbCr, and YPbPr all belong to the YUV color model (the YUV model also includes a transformed version called YUV, which is derived from PAL). 
+  - YUV, YCbCr, and YPbPr all belong to the YUV color model (the YUV model also includes a transformed version called YUV, which is used in PAL). 
   - YUV and YPbPr share similar transformation principles. YPbPr, developed after YUV, is specifically designed for digital display devices. YUV ranges from (Y: 0, U:-0.436,V: -0.615) to (Y: 1, U:0.436,V: 0.615)
   - YCbCr is a digital format based on YPbPr. In terms of value ranges, YPbPr ranges from (Y: 0, Pb/Pr: -0.5) to (Y: 1, Pb/Pr: 0.5), whereas YCbCr ranges from (Y: 16, Cb/Cr: 16) to (Y: 235, Cb/Cr: 240)
     - ref : 
