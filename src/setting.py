@@ -697,7 +697,7 @@ class ICCRadio(QtWidgets.QRadioButton):
         实际可结合 ImageCms 更细致解析字段，比如版本、设备类别等
         """
         # 打开并读取文件
-        self.icc_file=iccfile
+        self.icc_file=_get_file(iccfile)
         try:
             with open(iccfile, 'rb') as f:
                 # 读取文件内容到内存视图
@@ -1269,7 +1269,7 @@ class SettingDialog(QtWidgets.QDialog):
             itype="icc" if gamut=="CUSTOM" else "built-in"
             gamut_radio = ICCRadio(self,gamut,itype)
             if itype=="icc":
-                gamut_radio.update_profile(custom_gamut.get("icc_file",""))
+                gamut_radio.update_profile(_get_file(custom_gamut.get("icc_file","")))
 
             gamut_radio.clicked.connect(lambda :self.on_radio_clicked(gamut))
 

@@ -12,8 +12,7 @@ import textwrap
 
 import numpy as np
 
-from src.Lab import create_lab_proj_cus
-from src.XYZ import create_xyz_proj_cus
+
 from src.color_utils.color_utils import *
 
 _colorspacesignatures = {
@@ -499,17 +498,79 @@ def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
                 return x
         else :#"1D Curve":
             parameters=np.array(parameters)
-            maxy = np.max(parameters)
-            parameters=(parameters)/maxy
+            # maxy = np.max(parameters)
+            # parameters=(parameters)/maxy
 
             def degamma_func(x):
-                return np.interp(x, np.linspace(0, 1, len(parameters)),parameters)
+                return np.interp(x, np.linspace(0, 1, len(parameters)),parameters,
+                                left=-1,right=1)
             def gamma_func(x):
-                return np.interp(x, parameters, np.linspace(0, 1, len(parameters)))
+                return np.interp(x, parameters, np.linspace(0, 1, len(parameters)),
+                              left=-1,right=1)
     y=np.linspace(0,1,100)
-    x=gamma_func(y)
+    x=gamma_func(x)
     return x,y, degamma_func, gamma_func
 
+def load_rgb_custom_icc(icc_file):
+    try:
+        with open(icc_file, 'rb') as f:
+            # 读取文件内容到内存视图
+            s = memoryview(f.read())
+        testField = iccProfile()
+        testField.read(s)
+        ddict = testField.get_info()
+    except Exception as e:
+        raise
+        print(f"解析 ICC 失败: {e}")
+        raise Exception(f"解析 ICC 失败: {e}")
+
+    gamut_TRC_info = {}
+    gamut_profile_info = {}
+    if ddict["ProfileDeviceClass"][0] in ["mntr"]:
+        RGB, linearRGB = ddict["TRC"]["xy"]
+        function_str = ddict["TRC"]["function"]
+        parameters = ddict["TRC"]["parameters"]
+        curvetype = ddict["TRC"]["curvetype"]
+        funcid = ddict["TRC"]["funcid"]
+
+        # profile_info
+        gamut_TRC_info = {
+            "TRC-degamma": (RGB, linearRGB),
+            "TRC-gamma": (linearRGB, RGB)
+        }
+        custom_gamut = {
+            "Gamut Type": "icc",
+            "WP illuminant": ddict["WP_Illuminant"],  # White point
+            "WP xy": ddict["WP_xyY"],
+            "WP XYZ_Y1": ddict["WP_XYZ"],
+            # the media white point of a Display class profile ;
+            # media white point
+            # https://www.color.org/whyd50.xalter
+            "WP RGB2XYZ_matrix": np.round(ddict["WP_RGB2XYZ_matix"], 4),
+            "WP XYZ2RGB_matrix": np.round(ddict["WP_XYZ2RGB_matrix"], 4),
+            "TRC Function": function_str,
+            "TRC Parameters": parameters,
+            "TRC Type": curvetype,
+            "TRC FuncID": funcid,
+            # PCS info
+            "PCS Illuminant": ddict["PCS_Illuminant"],
+            "PCS xy": ddict["PCS_xyY"],
+            "PCS XYZ_Y1": ddict["PCS_XYZ"],
+        }
+
+    White_ILLUMINANTS_xy["CUSTOM"] = custom_gamut["WP xy"][:2]
+    global RGB2XYZ_M_CACHE
+    global Degamma_func_CACHE
+    global Gamma_func_CACHE
+    RGB2XYZ_M_CACHE["CUSTOM"] = custom_gamut["WP RGB2XYZ_matrix"]
+    RGB2XYZ_M_CACHE["CUSTOM-INV"] = custom_gamut["WP XYZ2RGB_matrix"]
+    x, y, degamma_func, gamma_func = get_plot_xy(
+        curvetype=custom_gamut["TRC Type"],
+        _funcid=custom_gamut["TRC FuncID"],
+        parameters=custom_gamut["TRC Parameters"],
+    )
+    Degamma_func_CACHE["CUSTOM"] = degamma_func
+    Gamma_func_CACHE["CUSTOM"] = gamma_func
 
 def update_custom_icc(custom_gamut:dict={},skip_lab_proj=False):
     if not custom_gamut :return
@@ -526,13 +587,15 @@ def update_custom_icc(custom_gamut:dict={},skip_lab_proj=False):
     )
     Degamma_func_CACHE["CUSTOM"] = degamma_func
     Gamma_func_CACHE["CUSTOM"] = gamma_func
-    print(RGB2XYZ_M_CACHE["CUSTOM"])
-    print(RGB2XYZ_M_CACHE["CUSTOM-INV"])
+    # print(RGB2XYZ_M_CACHE["CUSTOM"])
+    # print(RGB2XYZ_M_CACHE["CUSTOM-INV"])
     # generate canvas img
     # 简易进度条对话框
     if skip_lab_proj: return
     from PyQt5.QtWidgets import QDialog, QProgressBar, QVBoxLayout, QLabel, QApplication
     from PyQt5.QtCore import Qt, QEventLoop, QTimer
+    from src.Lab import create_lab_proj_cus
+    from src.XYZ import create_xyz_proj_cus
     app = QApplication.instance() or QApplication([])
     progress_dialog = QDialog()
     progress_dialog.setWindowFlags(progress_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
@@ -633,9 +696,6 @@ class paraType(iccProfileElement):
             self._function,
             self._parameters,
         )
-
-
-
 
 
 # cmSigVideoCardGammaType, identifier "vcgt"

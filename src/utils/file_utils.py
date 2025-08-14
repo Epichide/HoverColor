@@ -10,6 +10,11 @@ import os,sys
 
 
 def _get_file(relative_path):
+    # check is abspath
+    if not relative_path:
+        return relative_path
+    if os.path.isabs(relative_path):
+        return relative_path
     if getattr(sys, 'frozen', False):
         # 打包后环境：使用可执行文件所在目录
         base_path = os.path.join(os.path.dirname(sys.executable))

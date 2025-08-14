@@ -9,16 +9,22 @@
 #ref2:https://zhajiman.github.io/post/chromaticity_diagram/#%E6%9C%80%E7%BB%88%E6%95%88%E6%9E%9C
 from PIL import Image
 
-from src.color_utils.color_utils import color_RGB_to_XYZ, color_XYZ_to_RGB, color_XYZ_to_xyY, color_xyY_to_XYZ
+from src.color_utils.color_utils import color_RGB_to_XYZ, color_RGB_to_linearRGB, color_XYZ_to_RGB, color_XYZ_to_xyY, \
+    color_linearRGB_to_RGB, \
+    color_xyY_to_XYZ
 import math
 import  sys,os
-from .utils.file_utils import _get_file
+
+from src.color_utils.iccinspector import load_rgb_custom_icc
+
 
 
 try:
     from .color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
+    from .utils.file_utils import _get_file
 except:
     from color_utils.color_utils import color_Lab_to_RGB,color_RGB_to_Lab
+    from utils.file_utils import _get_file
 
 import numpy as np
 from PyQt5.QtCore import  Qt,pyqtSlot,QPoint,pyqtSignal,QTimer,QSize
@@ -103,8 +109,6 @@ class XYZChart(HueChart):
 def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
     import numpy as np
 
-
-
     # RGB Rectangle
     y_max = int(nsize / 0.85)
     x_max = int(nsize / 0.75)
@@ -114,15 +118,16 @@ def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
     Z = 1 - X - Y
     XYZ = np.dstack((X, Y, Z))
     rgb = color_XYZ_to_RGB(XYZ, gamut=gamut)
+
     rgb /= rgb.max(axis=-1, keepdims=True)
     AP = np.ones([nsize, nsize, 1], dtype=np.uint8) * 255
     A5 = np.isnan(rgb)
     # rgb=rgb.clip(0,1)
     xyz = color_RGB_to_XYZ(rgb, gamut=gamut)
-    # A2=np.max(np.abs(arr-xyz),axis=2)>0.001
+
     A3 = np.max(np.abs(rgb), axis=2) > 1
     A4 = np.min((rgb), axis=2) < 0
-    A2 = A3 | A4 | A5[:, :, 0] | A5[:, :, 1] | A5[:, :, 2] | (Z < 0)
+    A2 = A3 | A4 | A5[:, :, 0] | A5[:, :, 1] | A5[:, :, 2] | (Z < 0) #|A33 | A44
     # A2=A2+(rgb>1)[:,:,0]+(rgb<0)[:,:,0]
     AP[:, :, 0][A2] = 0
     rgb = rgb * 255
@@ -157,8 +162,6 @@ def create_xyz_proj_cus(nsize=500,gamut="P3-D65"):
     img[mask]=[0,0,0,255]
 
     area = np.sum(A2)
-    # plt.imshow(img)
-    # plt.show()
 
     outfile=_get_file(os.path.join("resource","XYZ",f"CIE_1931_chromaticity_diagram_{gamut}.png"))
     if img.dtype != np.uint8:
@@ -264,5 +267,11 @@ if __name__ == '__main__':
     # create_xyz_proj_cus(gamut="sRGB")
     # create_xyz_proj_cus(gamut="Rec.2020")
     # create_xyz_proj_cus(gamut="Rec.709")
-    create_xyz_proj_cus(gamut="AdobeRGB")
+    from matplotlib import pyplot as plt
+    icc_file=r"\\LAPTOP-G2K7ER06\share\sRGB IEC61966-2.1.icc"
+    load_rgb_custom_icc(icc_file)
+
+    create_xyz_proj_cus(gamut="CUSTOM")
+    create_xyz_proj_cus(gamut="sRGB")
+    plt.show()
 

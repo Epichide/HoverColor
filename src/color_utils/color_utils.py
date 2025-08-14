@@ -403,6 +403,7 @@ def color_XYZ_to_RGB(XYZ,gamut="sRGB"):
     linearRGB =matric_transform(Minv,XYZ)
     # print("linearRGB",linearRGB)
     RGB= color_linearRGB_to_RGB(linearRGB,gamut)
+
     # RGB=color_RGB_to_linearRGB(linearRGB,gamut)
     return RGB
 
