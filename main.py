@@ -426,7 +426,7 @@ class App(QWidget):
             gamutinfo=setting_diag.seleted_gamut_info
             custom_gamut=setting_diag.custom_gamut
             if (custom_gamut and
-                    custom_gamut["icc_file"]!=self.custom_gamut.get("icc_file",None)):# load new icc
+                    _get_file(custom_gamut["icc_file"])!=_get_file(self.custom_gamut.get("icc_file",None))):# load new icc
                 update_custom_icc(custom_gamut)
                 icc_file = custom_gamut.get("icc_file", None)
 
