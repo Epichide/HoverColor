@@ -437,7 +437,7 @@ class App(QWidget):
                     shutil.copyfile(icc_file, icc_file_copy)
                 else:
                     icc_file = None
-                custom_gamut["icc_file"] = icc_file_copy
+                custom_gamut["icc_file"] = "resource/profile/custom_icc.icc"
                 self.set_enable_gamut("CUSTOM",True)
             elif custom_gamut:
                 self.set_enable_gamut("CUSTOM", True)
@@ -535,6 +535,7 @@ class App(QWidget):
 
 
 if __name__ == '__main__':
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app=QApplication(sys.argv)
     QApplication.setStyle(QStyleFactory.create("Fusion"))
     listener.start()

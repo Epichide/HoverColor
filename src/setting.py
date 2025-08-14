@@ -668,11 +668,11 @@ class ICCRadio(QtWidgets.QRadioButton):
 
             if self.itype == "icc":
                 self.profile_info, self.gamut_TRC_info, self.icc_dict = self.parse_icc_profile(name_or_file)
-                if not self.icc_dict["ProfileDeviceClass"][0] in ["scnr", "mntr"]:
+                if not self.icc_dict["ProfileDeviceClass"][0] in ["mntr"]:
                     self.name_or_file=""
                     self.setText("CUSTOM: " + "ERROR")
                     raise TypeError("不支持非RGB类.icc文件\n"
-                                    "只支持 'scnr' 和 'mntr' \n"
+                                    "只支持  'mntr' \n"
                                     f"该文件为 \'{self.icc_dict['ProfileDeviceClass'][0]}\' ")
                 else:
                     self.name_or_file = name_or_file
@@ -683,6 +683,7 @@ class ICCRadio(QtWidgets.QRadioButton):
                 self.setText(name_or_file)
         except Exception as e:
             raise
+
             qmsg = QMessageBox.information(
                 self,  # 父窗口，None表示无父窗口
                 "提示",  # 标题
@@ -711,7 +712,7 @@ class ICCRadio(QtWidgets.QRadioButton):
 
         gamut_TRC_info = {}
         gamut_profile_info = {}
-        if ddict["ProfileDeviceClass"][0] in ["scnr", "mntr"]:
+        if ddict["ProfileDeviceClass"][0] in [ "mntr"]:
             RGB, linearRGB = ddict["TRC"]["xy"]
             function_str= ddict["TRC"]["function"]
             parameters = ddict["TRC"]["parameters"]
@@ -1233,6 +1234,8 @@ class SettingDialog(QtWidgets.QDialog):
     def ColorSapce_Setting(self, gamuts=[],custom_gamut={},cur_gamut=""):
         wid=self.tabWidget.add_tab("Color Space")
         self.old_icc_file= custom_gamut.get("icc_file","")
+        if self.old_icc_file:
+            self.old_icc_file=_get_file(self.old_icc_file)
         layout=wid.layout()
         # Gamut
         gamut_ncol = 4

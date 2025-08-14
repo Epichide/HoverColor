@@ -491,19 +491,21 @@ def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
                 return numpy.power(x, parameters)
             def gamma_func(x):
                 return numpy.power(x, 1/parameters)
-        elif _funcid == 2:#"1D Curve":
-            y = parameters
-            x = np.linspace(0, 1, len(y))
-            def degamma_func(x):
-                return np.interp(x, np.linspace(0, 1, len(y)), y)
-            def gamma_func(x):
-                return np.interp(x, y, np.linspace(0, 1, len(y)))
         elif _funcid == 0:#"Identity Curve":
             y = x
             def degamma_func(x):
                 return x
             def gamma_func(x):
                 return x
+        else :#"1D Curve":
+            parameters=np.array(parameters)
+            maxy = np.max(parameters)
+            parameters=(parameters)/maxy
+
+            def degamma_func(x):
+                return np.interp(x, np.linspace(0, 1, len(parameters)),parameters)
+            def gamma_func(x):
+                return np.interp(x, parameters, np.linspace(0, 1, len(parameters)))
     y=np.linspace(0,1,100)
     x=gamma_func(y)
     return x,y, degamma_func, gamma_func
@@ -1602,7 +1604,7 @@ class iccProfile:
             ddict[var.__class__.__name__[3:]]= var.value
         device_classes = {'scnr': 'Scanner', 'mntr': 'Monitor', 'prtr': 'Printer'}
         if "ProfileDeviceClass" in ddict:
-            if ddict["ProfileDeviceClass"][0] in ["scnr", "mntr"]:
+            if ddict["ProfileDeviceClass"][0] in [ "mntr"]:
                 WP_Illuminant,WP_XYZ,WP_xyY,WP_RGB2XYZ_matix,WP_XYZ2RGB_matrix=self.get_WP(ddict)
                 ddict["WP_Illuminant"] = WP_Illuminant
                 ddict["WP_XYZ"] = WP_XYZ
