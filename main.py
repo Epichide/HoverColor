@@ -130,10 +130,10 @@ class App(QWidget):
         self.submenu_gamut=QMenu("Gamut",self.menu)
         self.submenu_size=QMenu("Size",self.menu)
         for bar_wid in self.bar_widgets:
-            if bar_wid.__class__.__name__=="RecordForm": continue
+            # if bar_wid.__class__.__name__=="RecordForm": continue
             self.register_action(bar_wid,self.submenu_palette,bar_wid.colorspace)
             self.record.connect_wid(bar_wid)
-
+        self.register_action(self.record, self.submenu_palette, "Record")
         self.gamut_action_group = QActionGroup(self)
         self.gamut_action_group.setExclusive(True)  # 设为互斥模式（单选）
         for gamut in self.gamuts:
@@ -289,18 +289,21 @@ class App(QWidget):
         return num
     def change_picker_widget(self,key):
         print("showed colorspace widget num",self.check_dispay_widget_num())
-        # if  self.check_dispay_widget_num():
-        act=self.action_keys[key]
-        status=act.isChecked()
-        print(key,"shown",status)
-        #act.setChecked(~status)
-        if not status:
-            self.widget_keys[act].hide()
-        else:
-            self.widget_keys[act].show()
+        if  self.check_dispay_widget_num():
+            act=self.action_keys[key]
+            status=act.isChecked()
+            print(key,"shown",status)
+            #act.setChecked(~status)
+            if not status:
+                self.widget_keys[act].hide()
+            else:
+                self.widget_keys[act].show()
 
-        # self.record.show()
-        self.update_width()
+            # self.record.show()
+            self.update_width()
+        else:
+            act = self.action_keys[key]
+            act.setChecked(True)
     #####--------- PROFILE----------------
     def log_profile(self):
         self.profile={"colorspace":{},
@@ -482,7 +485,8 @@ class App(QWidget):
     def handleCursorMove(self,pos):
         (r,g,b),screenshoot=self.shot1.getAverageColor(pos.x(),pos.y())
         for wid  in self.widget_keys.values():
-            wid.pick_color(r,g,b)
+            if hasattr(wid,"pick_color"):
+                wid.pick_color(r,g,b)
 
     def pullCursor(self): # timer timeout
         if not self.inhotkey:# 正在设置热键时不响应热键
@@ -502,7 +506,8 @@ class App(QWidget):
             self.cursor_moved.emit(pos)
         (r, g, b), screenshoot = self.shot1.getAverageColor(pos.x(), pos.y())
         for wid in self.widget_keys.values():
-            wid.pick_color(r, g, b)
+            if hasattr(wid, "pick_color"): # exclude RecordForm
+                wid.pick_color(r, g, b)
 
 
     ##------- move whole widget

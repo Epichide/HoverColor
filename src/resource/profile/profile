@@ -1,10 +1,11 @@
 {
     "colorspace": {
-        "RGB": true,
-        "HSV": true,
-        "Lab": true,
-        "XYZ": true,
-        "YUV": true
+        "RGB": false,
+        "HSV": false,
+        "Lab": false,
+        "XYZ": false,
+        "YUV": true,
+        "Record": true
     },
     "hotkeys": {
         "Screen Pick": [
