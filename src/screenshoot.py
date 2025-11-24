@@ -136,12 +136,26 @@ class Screenshoot(QWidget):
         # if pos!=self.cur:
         self.cur=pos
         self.cursor_moved.emit(pos)
+        
     def getAverageColor(self,x,y):
-
-        window=int(QApplication.desktop().winId())
         width=self.width()-2
         height=self.height()-2
-        screenshoot=QApplication.primaryScreen().grabWindow(window,x-width//2,y-height//2,width,height)
+       
+        # Get screen geometry
+        global_pos = QCursor.pos()
+        app = QApplication.instance()
+        screen = app.screenAt(global_pos)
+        if not screen:
+            screen = app.primaryScreen()
+        screen_geometry = screen.geometry()
+        
+        # Calculate relative position
+        relative_x = global_pos.x() - screen_geometry.x()
+        relative_y = global_pos.y() - screen_geometry.y()
+
+        screenshoot=screen.grabWindow(0,relative_x-width//2,relative_y-height//2,width,height)
+        # screenshoot=QApplication.primaryScreen().grabWindow(window,x-width//2,y-height//2,width,height)
+        
         # screenshoot.save('shot.jpg', 'jpg')
         # raise
         image=screenshoot.toImage()
