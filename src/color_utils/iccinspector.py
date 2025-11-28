@@ -346,6 +346,10 @@ class curvType(iccProfileElement):
     def value(self):
 
         func_info = _curvetypetable.get(self._entriescount, _curvetypetable[2])
+        if func_info["parameters"]:
+            for key in func_info["parameters"].keys():
+                func_info["parameters"][key] = self._curve
+
         return {
             "typesignature":self._typesignature,
             "reserved":self._reserved,
@@ -355,7 +359,7 @@ class curvType(iccProfileElement):
             "curve":self._curve,
             "functiontype":self._entriescount,
             "function": func_info["function"],
-            "parameters":self._curve,
+            "parameters":func_info["parameters"],
         }
 
     @property
@@ -485,11 +489,12 @@ def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
                 return np.where(x<c*d+f,0,np.power(x-e,1/g)-b/a )
     elif curvetype=="curve":
         if _funcid == 1:#"Power Function":
-            y = numpy.power(x, parameters)
+            g=list(parameters.values())[0]
+            y = numpy.power(x, g)
             def degamma_func(x):
-                return numpy.power(x, parameters)
+                return numpy.power(x, g)
             def gamma_func(x):
-                return numpy.power(x, 1/parameters)
+                return numpy.power(x, 1/g)
         elif _funcid == 0:#"Identity Curve":
             y = x
             def degamma_func(x):
