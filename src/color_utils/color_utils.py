@@ -217,6 +217,58 @@ def range01(RGB):
         RGB=RGB/255
     return RGB
 
+#------ XYZ - XYZ ----------
+def color_XYZ_to_XYZ(XYZ,src_illuminant,tar_illuminant):
+    src_white=get_white_point_XYZ(src_illuminant)
+    tar_white=get_white_point_XYZ(tar_illuminant)
+    XYZ_trans_matrix=get_xyz_adapt_matrix(src_illuminant,tar_illuminant)
+    XYZ=matric_transform(XYZ_trans_matrix,XYZ)
+    return XYZ
+
+def get_xyz_adapt_matrix(
+        src_white: np.ndarray,  # 源光源白点XYZ（Y归一化为1，列向量/一维数组）
+        dst_white: np.ndarray,  # 目标光源白点XYZ（Y归一化为1，列向量/一维数组）
+        cat_matrix: np.ndarray = None  # 色适应变换（CAT）矩阵，默认Bradford
+    ) -> np.ndarray:
+    """
+    计算不同光源白点间的XYZ适配矩阵（色适应变换）
+    :param src_white: 源白点XYZ，shape=(3,) 或 (3,1)
+    :param dst_white: 目标白点XYZ，shape=(3,) 或 (3,1)
+    :param cat_matrix: CAT矩阵，默认使用Bradford（最常用）
+    :return: XYZ适配矩阵，shape=(3,3)
+    """
+    # 1. 初始化默认Bradford CAT矩阵
+    if cat_matrix is None:
+        cat_matrix = np.array([
+            [0.8951, 0.2664, -0.1614],
+            [-0.7502, 1.7135, 0.0367],
+            [0.0389, -0.0685, 1.0296]
+        ])
+    
+    # 2. 统一白点为列向量格式
+    src_white = src_white.reshape(3, 1)
+    dst_white = dst_white.reshape(3, 1)
+    
+    # 3. 计算白点在CAT空间的RGB值
+    src_rgb = cat_matrix @ src_white
+    dst_rgb = cat_matrix @ dst_white
+    
+    # 4. 计算缩放因子（避免除零，加极小值）
+    scale_r = dst_rgb[0, 0] / (src_rgb[0, 0] + 1e-10)
+    scale_g = dst_rgb[1, 0] / (src_rgb[1, 0] + 1e-10)
+    scale_b = dst_rgb[2, 0] / (src_rgb[2, 0] + 1e-10)
+    
+    # 5. 构建缩放矩阵
+    scale_matrix = np.diag([scale_r, scale_g, scale_b])
+    
+    # 6. 计算CAT矩阵的逆
+    cat_inv = np.linalg.inv(cat_matrix)
+    
+    # 7. 组合得到最终的XYZ适配矩阵
+    adapt_matrix = cat_inv @ scale_matrix @ cat_matrix
+    
+    return adapt_matrix
+
 
 
 #------- xyY - XYZ -----------
