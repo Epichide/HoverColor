@@ -20,6 +20,7 @@ example
   - support load multi icc （up to 3）
   - visualization of 3D gamut （maybe openGL？）
   - support the optional visualization of record （when there are no metrics to display）
+  - P3-D65 not be equal to display P3  ： https://en.wikipedia.org/wiki/DCI-P3 （please fix bug）
 - 20250813
   - add YUV,YCbcr,YPbPr
   - YUV, YCbCr, and YPbPr all belong to the YUV color model (the YUV model also includes a transformed version called YUV, which is used in PAL). 
