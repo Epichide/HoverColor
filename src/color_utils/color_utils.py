@@ -221,7 +221,7 @@ def range01(RGB):
 def color_XYZ_to_XYZ(XYZ,src_illuminant,tar_illuminant):
     src_white=get_white_point_XYZ(src_illuminant)
     tar_white=get_white_point_XYZ(tar_illuminant)
-    XYZ_trans_matrix=get_xyz_adapt_matrix(src_illuminant,tar_illuminant)
+    XYZ_trans_matrix=get_xyz_adapt_matrix(src_white,tar_white)
     XYZ=matric_transform(XYZ_trans_matrix,XYZ)
     return XYZ
 
@@ -340,8 +340,8 @@ def get_RGB2XYZ_M(gamut="sRGB"):
     M[:,0]*=S_RGB[0,0]
     M[:,1]*=S_RGB[0,1]
     M[:,2]*=S_RGB[0,2]
-    RGB2XYZ_M_CACHE[gamut]=M
-    return M
+    RGB2XYZ_M_CACHE[gamut]=M,W_XYZ
+    return M,W_XYZ
 
 def get_XYZ2RGB_M(gamut="sRGB"):
     """
@@ -352,7 +352,7 @@ def get_XYZ2RGB_M(gamut="sRGB"):
     global RGB2XYZ_M_CACHE
     if gamut+"-INV" in RGB2XYZ_M_CACHE:
         return RGB2XYZ_M_CACHE[gamut+"-INV"]
-    M=get_RGB2XYZ_M(gamut)
+    M,W_XYZ=get_RGB2XYZ_M(gamut)
     Minv=np.linalg.inv(M)
     RGB2XYZ_M_CACHE[gamut+"-INV"]=Minv
     return Minv
@@ -368,7 +368,7 @@ def get_RGB2XYZ_M_colour(gamut="sRGB"):
 def compare_RGB2XYZ_M():
     gamuts=["P3-D65","sRGB"]
     for gamut in gamuts:
-        M1=get_RGB2XYZ_M(gamut)
+        M1,W_XYZ=get_RGB2XYZ_M(gamut)
         M2=get_RGB2XYZ_M_colour(gamut)
         print("=========")
         print(M1,"\n",M2)
@@ -441,13 +441,17 @@ def color_linearRGB_to_RGB(linearRGB,gamut="sRGB"):
 
 #------- RGB - XYZ -----------
 #------------------------------------
+def color_linearRGB_to_XYZ(linearRGB,gamut="sRGB"):
+    M,W_XYZ=get_RGB2XYZ_M(gamut)
+    XYZ=matric_transform(M,linearRGB)
+    return XYZ,W_XYZ
 def color_RGB_to_XYZ(RGB,gamut="sRGB"):
     RGB=range01(RGB)
     linearRGB=color_RGB_to_linearRGB(RGB,gamut)
-    M=get_RGB2XYZ_M(gamut)
+    M,W_XYZ=get_RGB2XYZ_M(gamut)
     # print("linearRGB",linearRGB)
     XYZ=matric_transform(M,linearRGB)
-    return XYZ
+    return XYZ,W_XYZ
 
 def color_XYZ_to_RGB(XYZ,gamut="sRGB"):
 
