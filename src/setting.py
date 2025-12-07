@@ -513,7 +513,6 @@ class ICCTable(QtWidgets.QTableWidget):
             print(f"成功加载样式文件：{style_file}")
 
         except Exception as e:
-            raise
             print(f"加载样式文件失败：{str(e)}")
     def _enable_manual_resize(self):
         """切换为允许手动调整列宽，同时记录初始列宽比例"""
@@ -683,7 +682,6 @@ class ICCRadio(QtWidgets.QRadioButton):
                 self.name_or_file = name_or_file
                 self.setText(name_or_file)
         except Exception as e:
-            raise
             qmsg = QMessageBox.information(
                 self,  # 父窗口，None表示无父窗口
                 "提示",  # 标题
@@ -706,8 +704,6 @@ class ICCRadio(QtWidgets.QRadioButton):
             testField.read(s)
             ddict = testField.get_info()
         except Exception as e:
-            raise
-
             print(f"解析 ICC 失败: {e}")
             raise Exception(f"解析 ICC 失败: {e}")
 
@@ -764,9 +760,9 @@ class ICCRadio(QtWidgets.QRadioButton):
         xy_value = White_ILLUMINANTS_xy[illuminant]
         XYZ_Y1_value = get_white_point_XYZ(illuminant)
 
-        RGB2XYZ_matix = np.round(get_RGB2XYZ_M(gamut), 4)
+        RGB2XYZ_matix = np.round(get_RGB2XYZ_M(gamut)[0], 4)
         RGB2XYZ_matix = (RGB2XYZ_matix)
-        XYZ2RGB_matix = np.round(get_XYZ2RGB_M(gamut), 4)
+        XYZ2RGB_matix = np.round(get_XYZ2RGB_M(gamut)[0], 4)
         XYZ2RGB_matix = (XYZ2RGB_matix)
 
         RGB = np.arange(0, 1.01, 0.01)
@@ -1192,7 +1188,6 @@ class SettingDialog(QtWidgets.QDialog):
             print(f"成功加载样式文件：{style_file}")
 
         except Exception as e:
-            raise
             print(f"加载样式文件失败：{str(e)}")
 
 

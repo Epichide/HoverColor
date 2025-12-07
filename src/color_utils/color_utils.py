@@ -13,13 +13,13 @@
 import numpy as np
 # from colour.models.rgb import RGB_COLOURSPACES, RGB_to_XYZ, XYZ_to_RGB
 RGB2XYZ_M_CACHE={
-    "CUSTOM":np.array([[ 0.4866,  0.2657 , 0.1982],
-     [ 0.229 ,  0.6917 , 0.0793],
-     [-0.    ,  0.0451,  1.0439]]),
+    # "CUSTOM":np.array([[ 0.4866,  0.2657 , 0.1982],
+    #  [ 0.229 ,  0.6917 , 0.0793],
+    #  [-0.    ,  0.0451,  1.0439]]),
 
-    "CUSTOM-INV":np.array([[ 2.4935 ,-0.9314,-0.4027],
-                     [-0.8295 , 1.7627  ,0.0236],
-                     [ 0.0359 ,-0.0762 , 0.9569]])
+    # "CUSTOM-INV":np.array([[ 2.4935 ,-0.9314,-0.4027],
+    #                  [-0.8295 , 1.7627  ,0.0236],
+    #                  [ 0.0359 ,-0.0762 , 0.9569]])
 }
 def degamma_func(x):
     a,b,c,d,g=[0.9478607177734375, 0.0521392822265625, 0.077392578125, 0.039276123046875, 2.399993896484375]
@@ -301,11 +301,13 @@ def white_xy2XYZ(xy,panel=1.0):
 
 
 def get_white_point_XYZ(illuminant="D65"):
-    if not isinstance(illuminant,str):
+    if not isinstance(illuminant,str) and len(illuminant)==3:#XYZ
         white_XYZ=illuminant
-    elif illuminant=="E":
+    elif not isinstance(illuminant,str) and len(illuminant)==2:#xy
+        white_XYZ=white_xy2XYZ(illuminant)
+    elif illuminant=="E": 
         white_XYZ= [1.0,1.0,1.0]
-    else:
+    else: # str eg D65, CUSTOM
         white_xy=White_ILLUMINANTS_xy[illuminant]
         white_XYZ=white_xy2XYZ(white_xy)
     return  np.array(white_XYZ)
@@ -354,8 +356,8 @@ def get_XYZ2RGB_M(gamut="sRGB"):
         return RGB2XYZ_M_CACHE[gamut+"-INV"]
     M,W_XYZ=get_RGB2XYZ_M(gamut)
     Minv=np.linalg.inv(M)
-    RGB2XYZ_M_CACHE[gamut+"-INV"]=Minv
-    return Minv
+    RGB2XYZ_M_CACHE[gamut+"-INV"]=Minv,W_XYZ
+    return Minv,W_XYZ
 def get_RGB2XYZ_M_colour(gamut="sRGB"):
     # print(RGB_COLOURSPACES.keys())
     # if gamut=="P3-D65":
@@ -455,7 +457,7 @@ def color_RGB_to_XYZ(RGB,gamut="sRGB"):
 
 def color_XYZ_to_RGB(XYZ,gamut="sRGB"):
 
-    Minv=get_XYZ2RGB_M(gamut)
+    Minv,W_XYZ=get_XYZ2RGB_M(gamut)
     linearRGB =matric_transform(Minv,XYZ)
     # print("linearRGB",linearRGB)
     RGB= color_linearRGB_to_RGB(linearRGB,gamut)
@@ -571,7 +573,7 @@ def color_RGB_to_Lab(RGB,gamut="sRGB"):
     white_point = Gmaut_Illuminant[gamut]
     # white_point="D65"
 
-    XYZ=color_RGB_to_XYZ(RGB,gamut)
+    XYZ,W_XYZ=color_RGB_to_XYZ(RGB,gamut)
     # print("XYZ",XYZ)
     Lab=color_XYZ_to_Lab(XYZ,whitpoint=white_point)
     return  Lab

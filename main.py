@@ -1,5 +1,4 @@
 import  sys,os
-
 import numpy as np
 from PyQt5.QtCore import QEventLoop, Qt, pyqtSignal, QTimer
 from PyQt5.QtGui import QColor, QIcon, QCursor

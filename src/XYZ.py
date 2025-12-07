@@ -82,7 +82,7 @@ class XYZChart(HueChart):
         super().freeze_cursor()
         self.XYZ_1=self.XYZ_2
     def pick_color(self,r,g,b):
-        XYZ=color_RGB_to_XYZ(np.array([r,g,b])/255.0,gamut=self.gamut)
+        XYZ,W_XYZ=color_RGB_to_XYZ(np.array([r,g,b])/255.0,gamut=self.gamut)
         X,Y,Z=XYZ
         x,y,Y=color_XYZ_to_xyY(XYZ)
 

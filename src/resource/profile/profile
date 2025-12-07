@@ -1,9 +1,9 @@
 {
     "colorspace": {
-        "RGB": false,
-        "HSV": false,
-        "Lab": false,
-        "XYZ": false,
+        "RGB": true,
+        "HSV": true,
+        "Lab": true,
+        "XYZ": true,
         "YUV": true,
         "Record": true
     },
@@ -29,13 +29,79 @@
             50
         ]
     },
-    "gamut": "sRGB",
+    "gamut": "CUSTOM",
     "zoom": 92.0,
     "metrics": [
         "RGB",
         "Lab"
     ],
-    "custom_gamut": {},
+    "custom_gamut": {
+        "Gamut": "custom_icc.icc",
+        "Gamut Type": "icc",
+        "WP illuminant": "Near D65",
+        "WP xy": [
+            0.3127210377044409,
+            0.3290290176899252,
+            0.9999971407446098
+        ],
+        "WP XYZ_Y1": [
+            0.9504333257616616,
+            0.9999971407446098,
+            1.088806460879266
+        ],
+        "WP RGB2XYZ_matrix": [
+            [
+                0.4124,
+                0.3576,
+                0.1804
+            ],
+            [
+                0.2126,
+                0.7152,
+                0.0722
+            ],
+            [
+                0.0193,
+                0.1192,
+                0.9503
+            ]
+        ],
+        "WP XYZ2RGB_matrix": [
+            [
+                3.2409,
+                -1.5374,
+                -0.4986
+            ],
+            [
+                -0.9692,
+                1.876,
+                0.0415
+            ],
+            [
+                0.0556,
+                -0.204,
+                1.0573
+            ]
+        ],
+        "TRC Function": "Y = X**g",
+        "TRC Parameters": {
+            "g": 2.399993896484375
+        },
+        "TRC Type": "para",
+        "TRC FuncID": 0,
+        "PCS Illuminant": "Near D50",
+        "PCS xy": [
+            0.34570292198022834,
+            0.3585375327567059,
+            1.0
+        ],
+        "PCS XYZ_Y1": [
+            0.964202880859375,
+            1.0,
+            0.8249053955078125
+        ],
+        "icc_file": "D:\\Note\\CODE\\HoverColor\\src\\resource\\profile\\custom_icc.icc"
+    },
     "fontsize": 13,
     "loss_hover_opacity": 1.0
 }

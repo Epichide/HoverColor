@@ -513,7 +513,7 @@ def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
                 return np.interp(x, parameters, np.linspace(0, 1, len(parameters)),
                               left=-1,right=1)
     y=np.linspace(0,1,100)
-    x=gamma_func(x)
+    x=gamma_func(y)
     return x,y, degamma_func, gamma_func
 
 def load_rgb_custom_icc(icc_file):
@@ -567,8 +567,8 @@ def load_rgb_custom_icc(icc_file):
     global RGB2XYZ_M_CACHE
     global Degamma_func_CACHE
     global Gamma_func_CACHE
-    RGB2XYZ_M_CACHE["CUSTOM"] = custom_gamut["WP RGB2XYZ_matrix"]
-    RGB2XYZ_M_CACHE["CUSTOM-INV"] = custom_gamut["WP XYZ2RGB_matrix"]
+    RGB2XYZ_M_CACHE["CUSTOM"] = custom_gamut["WP RGB2XYZ_matrix"],ddict["WP_Illuminant"]
+    RGB2XYZ_M_CACHE["CUSTOM-INV"] = custom_gamut["WP XYZ2RGB_matrix"],ddict["WP_Illuminant"]
     x, y, degamma_func, gamma_func = get_plot_xy(
         curvetype=custom_gamut["TRC Type"],
         _funcid=custom_gamut["TRC FuncID"],
@@ -580,11 +580,12 @@ def load_rgb_custom_icc(icc_file):
 def update_custom_icc(custom_gamut:dict={},skip_lab_proj=False):
     if not custom_gamut :return
     White_ILLUMINANTS_xy["CUSTOM"] = custom_gamut["WP xy"][:2]
+    white_XYZ=get_white_point_XYZ(White_ILLUMINANTS_xy["CUSTOM"])
     global RGB2XYZ_M_CACHE
     global Degamma_func_CACHE
     global Gamma_func_CACHE
-    RGB2XYZ_M_CACHE["CUSTOM"] = custom_gamut["WP RGB2XYZ_matrix"]
-    RGB2XYZ_M_CACHE["CUSTOM-INV"] = custom_gamut["WP XYZ2RGB_matrix"]
+    RGB2XYZ_M_CACHE["CUSTOM"] = custom_gamut["WP RGB2XYZ_matrix"],white_XYZ
+    RGB2XYZ_M_CACHE["CUSTOM-INV"] = custom_gamut["WP XYZ2RGB_matrix"],white_XYZ
     x,y, degamma_func, gamma_func = get_plot_xy(
         curvetype=custom_gamut["TRC Type"],
         _funcid=custom_gamut["TRC FuncID"],
