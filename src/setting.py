@@ -6,6 +6,7 @@
 # @File: setting.py
 # @Software: PyCharm
 import os
+import traceback
 
 
 # !/usr/bin/env python
@@ -30,7 +31,7 @@ from .record import RecordForm
 from .color_utils.color_utils import *
 from .wid_utils.hotkeys_utils.hotkey_wid import HotKeyWindow
 from .utils.file_utils import _get_file
-
+from .color_utils.icc import load_icc, save_icc, warp_file
 # 设置 matplotlib 支持中文显示
 plt.rcParams["font.family"] = ["SimHei"]
 plt.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题
@@ -682,10 +683,16 @@ class ICCRadio(QtWidgets.QRadioButton):
                 self.name_or_file = name_or_file
                 self.setText(name_or_file)
         except Exception as e:
+            # print traceback.format_exc() store as string
+            print(f"解析 ICC 失败: {e}")
+            error_string = traceback.format_exc()
+            # get error line number
+            line_number = traceback.extract_tb(e.__traceback__)[-1][1]
+            
             qmsg = QMessageBox.information(
                 self,  # 父窗口，None表示无父窗口
                 "提示",  # 标题
-                f"{type(e)}:\n{str(e)}"  # 内容
+                f"{type(e)}:\n{str(e)}\n错误行号: {line_number}"+"\n" + error_string,  # 内容
             )
 
 
@@ -805,9 +812,16 @@ class ICCRadio(QtWidgets.QRadioButton):
 
     def mouseDoubleClickEvent(self, *args, **kwargs):
         if self.itype=="icc":
-            filepath = QFileDialog.getOpenFileName(self, 'Select a ICC Profile file', "", '*.icc *.icm')
+            filepath = QFileDialog.getOpenFileName(self, 'Select a ICC Profile file', "", '*.icc *.icm *.jpg *.png *.jpeg')
             if len(filepath[0]) == 0: return
-            self.update_profile(filepath[0])
+            pic_sufixs=[".jpg", ".png", ".jpeg"]
+            if os.path.splitext(filepath[0])[1].lower() in pic_sufixs:
+                prf = load_icc(filepath[0])
+                if prf is not None:
+                    iccpath=save_icc(prf, warp_file(os.path.dirname(os.path.abspath(__file__)),"resource/profile/temp.icc"))
+                    self.update_profile(iccpath)
+            else:
+                self.update_profile(filepath[0])
             self.click()
 
     def get_gamut(self):

@@ -6,6 +6,7 @@
 # @File: css.py
 # @Software: PyCharm
 import io
+import os
 
 from PIL import Image, ImageCms
 
@@ -72,6 +73,20 @@ def show_icc(prf: ImageCms.ImageCmsProfile):
         show_att(att,info_dict["basic"])
     return info_dict
 
+def warp_file(absdir,path):
+    # if relative_path:
+    if not os.path.isabs(path):
+        abspath = os.path.join(absdir, path)
+        return abspath
+    return path
+
+def save_icc(prf, path):
+    bb=prf.tobytes()
+    dir=os.path.dirname(path)
+    os.makedirs(dir, exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(bb)
+    return path
 def load_icc(icc_path):
     if icc_path.endswith('.css') or icc_path.endswith('.icm') :
         prf = ImageCms.getOpenProfile(icc_path)
@@ -79,12 +94,16 @@ def load_icc(icc_path):
         image = Image.open(icc_path)
         icc = image.info.get('icc_profile')
         f = io.BytesIO(icc)
-        prf = ImageCms.ImageCmsProfile(f)
+        try:
+            prf = ImageCms.ImageCmsProfile(f)
+        except Exception as ex:
+            print("Cannot extract ICC profile from image.")
+            prf=None
     # save css profile
-    bb=prf.tobytes()
-    with open("profiles/extracted.icc", "wb") as f:
-        f.write(bb)
+
     return prf
+
+
 
 if __name__ == '__main__':
     # imgi=imread("glossy.png")
@@ -99,6 +118,8 @@ if __name__ == '__main__':
     # css = image.info.get('icc_profile')
     # f = io.BytesIO(css)
     # prf = ImageCms.ImageCmsProfile(f)
-    prf=load_icc(r"profiles/ip16-IMG_0122.JPG")
-    show_icc(prf)
-    print(prf.profile.__dir__())
+    prf=load_icc(r"D:\Note\CODE\HoverColor\src\icon\icon.png")
+    if prf :
+        save_icc(prf,warp_file(os.path.dirname(os.path.abspath(__file__)),"profiles/extracted.icc"))
+        show_icc(prf)
+        print(prf.profile.__dir__())

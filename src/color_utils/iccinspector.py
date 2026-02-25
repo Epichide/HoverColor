@@ -79,7 +79,7 @@ _curvetypetable={
         "parameters": {"g": None}
     },
     2: {
-        "curvetype": "Table Curve",
+        "curvetype": "1D Curve",
         "function" : "Y =f(X)",
         "parameters": {}
     }
@@ -346,9 +346,12 @@ class curvType(iccProfileElement):
     def value(self):
 
         func_info = _curvetypetable.get(self._entriescount, _curvetypetable[2])
-        if func_info["parameters"]:
-            for key in func_info["parameters"].keys():
-                func_info["parameters"][key] = self._curve
+        if self._curve.any():
+            if func_info['curvetype']=="1D Curve":
+                func_info["parameters"] = self._curve
+            else:
+                for key in func_info["parameters"].keys():
+                    func_info["parameters"][key] = self._curve
 
         return {
             "typesignature":self._typesignature,
@@ -372,7 +375,7 @@ class curvType(iccProfileElement):
             self._typesignature = unpack_tagSignature(curvtypebuffer[0:4])
             self._reserved = unpack_uInt32Number(curvtypebuffer[4:8])
             self._entriescount = unpack_uInt32Number(curvtypebuffer[8:12])
-
+            
             if self._entriescount == 0:
                 # Curve type is an identity
                 self._curvetype = "Identity Curve"

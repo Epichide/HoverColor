@@ -321,6 +321,8 @@ def compare_white_point_XYZ():
         xyz=get_white_point_XYZ(illuminant)
         xyz2=get_white_point_XYZ_colour(illuminant)
         # print(xyz,xyz2)
+
+#------- XYZ - RGB matix----------
 def get_RGB_xyz(gamut="sRGB"):
     # primary RGB' xyz value
     rgb_xy=np.array(RGB_xy[gamut])
@@ -543,7 +545,7 @@ def color_XYZ_chromatic_adaptation(XYZ,fromIlluminant="D65",toIlluminant="D65",m
 
     return adapted_XYZ
 
-# ---- XYZ - Lab
+# ---- XYZ - Lab --------------------
 def color_XYZ_to_Lab(XYZ,whitpoint="D65"):
     def ffunc(v):
         epsilion=(6/29)**3
@@ -639,6 +641,65 @@ def color_Lch_to_Lab(Lch):
     Lab=np.stack([L,a,b],axis=-1)
     return Lab
 
+
+
+## ------ Color Space Transform ------
+def color_XYZE2AC1C2(XYZ_E):
+    """
+    Docstring for color_XYZE2AC1C2 
+    opponent color space
+    
+        luminance (A/Y)
+        red-green chrominance(C1)
+        Blue-Yellow Chrominance (C2) 
+    
+    :param XYZ_E: Description
+    """
+    XYZE_to_ACC_matrix=np.array(
+        [[0,  1,   0],
+        [1, -1,   0],
+        [0, 0.4, -0.4]]
+    )
+    AC1C2=matric_transform(XYZE_to_ACC_matrix,XYZ_E)
+    return AC1C2
+
+def color_AC1C2_to_XYZE(ac1c2):
+    ACC_to_XYZE_matrix=np.array(
+        [[1,  1,   0],
+        [1, 0,   0],
+        [1, 0, -2.5]]
+    )
+    XYZ_E=matric_transform(ACC_to_XYZE_matrix,ac1c2)
+    return XYZ_E
+
+def color_XYZD65_to_YC1C2(XYZD65):
+    """
+    Docstring for XYZD65_to_YC1C2
+    
+    0.0556 0.9981 -0.0254
+    0.9510 -0.9038 0
+    0.0386 1.0822 -1.0276
+    
+    :param XYZD65: Description
+    :return: Description
+    :rtype: Any
+    """
+    YC1C2_to_XYZD65_matrix=np.array(
+        [[0.0556, 0.9981, -0.0254],
+        [0.9510, -0.9038, 0],
+        [0.0386, 1.0822, -1.0276]]
+    )
+    YC1C2=matric_transform(YC1C2_to_XYZD65_matrix,XYZD65)
+    return YC1C2
+
+def color_YC1C2_to_XYZD65(YC1C2):
+    XYZD65_to_YC1C2_matrix=np.array([
+        [ 0.9287,  0.9982, -0.023 ],
+       [ 0.9772, -0.0562, -0.0242],
+       [ 1.0641, -0.0216, -0.9994]])
+    XYZD65=matric_transform(XYZD65_to_YC1C2_matrix,YC1C2)
+    return XYZD65
+  
 
 # --------- XYZ - YCxCz ---------
 def get_XYZD65_to_AC1C2_M(xyz_illuminant="D65"):
@@ -1012,12 +1073,25 @@ def color_YCbCr_to_RGB(YCbCr,criteria="ITU-R BT.601"):
 
 
 if __name__ == '__main__':
+    # print(get_white_point_XYZ("D65"))
+    # print(White_ILLUMINANTS_xy["D65"],1-np.sum(White_ILLUMINANTS_xy["D65"]))
+    s_rgb=np.array([0,1,0])
+    xyz,_= color_RGB_to_XYZ(s_rgb,gamut="sRGB")
+    p3_rgb= color_XYZ_to_RGB(xyz,gamut="P3-D65")
 
-    for criteria in WEIGHTS_YPBPR_rbuv.keys():
-        # M=get_YPbPr_2_RGB_M(criteria)
-        M=get_RGB_2_YPbPr_M(criteria)
-        print(M)
+    print(p3_rgb)
+    print(s_rgb)
+    print(xyz)
+    exit()
+    
+    print(get_RGB2XYZ_M(gamut="sRGB"))
+    print(color_linearRGB_to_XYZ(np.array([1,0,0]),gamut="sRGB")[0])
+    print(get_xyz_adapt_matrix(src_white=get_white_point_XYZ("D65"),dst_white=get_white_point_XYZ("E")))
 
+    # for criteria in WEIGHTS_YPBPR_rbuv.keys():
+    #     # M=get_YPbPr_2_RGB_M(criteria)
+    #     M=get_RGB_2_YPbPr_M(criteria)
+    #     print(M)
 
     # x1=np.linspace(0,1,100)
     # y1=Gamma_func_CACHE["CUSTOM"](x1)

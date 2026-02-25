@@ -9,7 +9,7 @@ import os
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox, QPushButton
-
+from typing import List
 
 class HotkeyPicker(QPushButton):
 
@@ -33,8 +33,8 @@ class HotkeyPicker(QPushButton):
                  selection_text: str = '..',
                  cancel_key: Qt.Key = Qt.Key.Key_Escape,
                  key_filter_enabled: bool = False,
-                 whitelisted_keys: list[Qt.Key] = [],
-                 blacklisted_keys: list[Qt.Key] = [Qt.Key_Enter,Qt.Key_Return,Qt.Key_Shift],
+                 whitelisted_keys: List[Qt.Key] = [],
+                 blacklisted_keys: List[Qt.Key] = [Qt.Key_Enter,Qt.Key_Return,Qt.Key_Shift],
                  max_key_num=1):
         """Create a new HotkeyPicker instance
 
@@ -328,7 +328,7 @@ class HotkeyPicker(QPushButton):
 
         self.__key_filter_enabled = on
 
-    def getWhitelistedKeys(self) -> list[Qt.Key]:
+    def getWhitelistedKeys(self) -> List[Qt.Key]:
         """Get list of whitelisted keys
 
         :return: whitelisted keys
@@ -336,7 +336,7 @@ class HotkeyPicker(QPushButton):
 
         return self.__whitelisted_keys
 
-    def setWhitelistedKeys(self, whitelisted_keys: list[ int]):
+    def setWhitelistedKeys(self, whitelisted_keys: List[ int]):
         """Set whitelisted keys (keys that can be selected)
 
         :param whitelisted_keys: the new list of whitelisted keys
@@ -346,7 +346,7 @@ class HotkeyPicker(QPushButton):
             self.__blacklisted_keys = []
         self.__whitelisted_keys = whitelisted_keys
 
-    def getBlacklistedKeys(self) -> list[Qt.Key]:
+    def getBlacklistedKeys(self) -> List[Qt.Key]:
         """Get list of blacklisted keys
 
         :return: blacklisted keys
@@ -354,7 +354,7 @@ class HotkeyPicker(QPushButton):
 
         return self.__blacklisted_keys
 
-    def setBlacklistedKeys(self, blacklisted_keys: list[ int]):
+    def setBlacklistedKeys(self, blacklisted_keys: List[ int]):
         """Set blacklisted keys (keys that cannot be selected)
 
         :param blacklisted_keys: the new list of blacklisted keys
