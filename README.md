@@ -21,6 +21,9 @@ example
   - visualization of 3D gamut （maybe openGL？）
   - support the optional visualization of record （when there are no metrics to display）
   - P3-D65 not be equal to display P3  ： https://en.wikipedia.org/wiki/DCI-P3 （please fix bug）
+- 20260226
+  - fix bug: crash when loading 1D curve ICC profiles
+  - feature: support extracting ICC profiles from images containing embedded ICC profiles
 - 20251207
   - fixbug : XYZtoRGB_matrix return matrx and whitepoint (old version only return matrix)
 - 20250813
