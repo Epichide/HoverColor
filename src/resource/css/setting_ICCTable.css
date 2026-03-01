@@ -7,43 +7,58 @@ QTabWidget::tab-bar {
 }
 
 QTabBar::tab {
-    background-color: #DBE7F1; /* 标签未选中时背景，匹配浅蓝风格 */
-    color: #333;              /* 标签文字颜色 */
-    border: 1px solid #A0C3DC;/* 标签边框 */
-    border-bottom: none;     /* 底部无边框，避免与内容区重叠 */
+    background-color: #DBE7F1;
+    /* 标签未选中时背景，匹配浅蓝风格 */
+    color: #333;
+    /* 标签文字颜色 */
+    border: 1px solid #A0C3DC;
+    /* 标签边框 */
+    border-bottom: none;
+    /* 底部无边框，避免与内容区重叠 */
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
-    padding: 4px 10px;       /* 标签内边距，让文字居中 */
-    margin-right: 2px;       /* 标签之间间距 */
+    padding: 4px 10px;
+    /* 标签内边距，让文字居中 */
+    margin-right: 2px;
+    /* 标签之间间距 */
 }
 
 QTabBar::tab:selected {
-    background-color: #ffffff; /* 选中标签背景变白，贴合截图 */
+    background-color: #ffffff;
+    /* 选中标签背景变白，贴合截图 */
     border: 1px solid #A0C3DC;
-    border-bottom: 1px solid #ffffff; /* 覆盖下方边框，避免线条断裂 */
-    font-weight: bold;         /* 选中标签文字加粗，和截图一致 */
+    border-bottom: 1px solid #ffffff;
+    /* 覆盖下方边框，避免线条断裂 */
+    font-weight: bold;
+    /* 选中标签文字加粗，和截图一致 */
 }
 
 QTabWidget::pane {
-    border: 1px solid #A0C3DC; /* 内容区边框，和表格、标签栏统一 */
+    border: 1px solid #A0C3DC;
+    /* 内容区边框，和表格、标签栏统一 */
     border-radius: 4px;
-    margin-top: -1px; /* 与标签栏底部贴合，视觉更连贯 */
+    margin-top: -1px;
+    /* 与标签栏底部贴合，视觉更连贯 */
 }
 
-/* =============== QRadioButton 样式 =============== */
-QRadioButton {
+/* =============== QRadioButton 和 ICCRadio 样式 =============== */
+QRadioButton,
+ICCRadio {
     color: #333;
     spacing: 4px;
-    font-size: 30px; /* 字体大小调整，适应截图风格 */
+    font-size: 13px;
+    /* 字体大小调整，适应截图风格 */
 }
 
 
 
 QRadioButton::indicator {
-    width: 14px; /* 缩小尺寸，更贴近截图里的紧凑感 */
+    width: 14px;
+    /* 缩小尺寸，更贴近截图里的紧凑感 */
     height: 14px;
     border: 2px solid #99c7e9;
-    border-radius: 7px; /* 圆形适配小尺寸 */
+    border-radius: 7px;
+    /* 圆形适配小尺寸 */
     background-color: #ffffff;
 }
 
@@ -56,7 +71,8 @@ QRadioButton::indicator:checked::after {
     display: block;
     width: 8px;
     height: 8px;
-    margin: 2px auto; /* 居中显示圆点 */
+    margin: 2px auto;
+    /* 居中显示圆点 */
     border-radius: 4px;
     background-color: #4da6ff;
 }
@@ -86,7 +102,6 @@ QTableWidget {
 QTableWidget::item {
     padding: 1px 1px;
     border: 1px solid #DBE7F1;
-    user-select: text;
     color: #333;
     background-color: transparent;
 }
@@ -120,7 +135,8 @@ QPushButton {
     border: 1px solid #A0C3DC;
     border-radius: 4px;
     padding: 4px 12px;
-    margin: 0 4px; /* 按钮之间间距 */
+    margin: 0 4px;
+    /* 按钮之间间距 */
 }
 
 QPushButton:hover {

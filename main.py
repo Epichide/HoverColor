@@ -22,6 +22,7 @@ from src.setting import SettingDialog
 from src.wid_utils.basewid_utils import DynamicGridLayout
 from src.utils.file_utils import _get_file
 from src.wid_utils.hotkeys_utils.response_key import GLOBAL_PRESS, listener
+from src.sysicc_viewer import ICCViewerWidget
 
 #rom src.color_picker import ScaleWindow
 
@@ -82,6 +83,9 @@ class App(QWidget):
         self._initSignals()
         self.customContextMenuRequested.connect(self.rightmenu)
         self.load_profile()
+        
+        # 初始化ICC查看器
+        self.icc_viewer = None
 
         self.show()
         self.shot1.show()
@@ -148,15 +152,27 @@ class App(QWidget):
         self.action_setting = QAction("设置", self)
         self.menu.addAction(self.action_setting)
         self.action_setting.triggered.connect(self.set_Setting)
-
+        
+        # 添加ICC查看器菜单项
+        self.menu.addSeparator()
+        self.action_icc_viewer = QAction("显示器ICC查看", self)
+        self.menu.addAction(self.action_icc_viewer)
+        self.action_icc_viewer.triggered.connect(self.open_icc_viewer)
 
         self.action_quit=QAction("退出",self)
         self.menu.addAction(self.action_quit)
         self.action_quit.triggered.connect(self.close)
-        self.action_quit.triggered.connect(self.shot1.close)
-
         self.action_quit.triggered.connect(self.log_profile)
 
+    def close(self):
+        if self.icc_viewer is not None:
+            self.icc_viewer.close()
+        if self.shot1 is not None:
+            self.shot1.close()
+        if self.setting_diag is not None:
+            self.setting_diag.close()
+        
+        super().close()
     def update_width(self):
 
         self.setFixedSize(self.Glayout.update_layout())
@@ -176,6 +192,9 @@ class App(QWidget):
         self.update_width()
         self.set_gamut(gamut="P3-D65")
         self.inhotkey=False
+        self.setting_opened=False
+        self.setting_diag=None
+        self.icc_viewer=None
         # register hotkey
         self.register_hotkey([Qt.Key_Alt,Qt.Key_QuoteLeft],
                              self.getCustomColor,"Screen Pick")
@@ -195,12 +214,18 @@ class App(QWidget):
         submenu.addAction(act)
         self.gamut_action_group.addAction(act)
         self.gamut_keys[gamut] = act
+        if gamut =="CUSTOM":
+            act.setEnabled(self.Is_enable_custom_gamut())
         act.triggered.connect(lambda: self.set_gamut(gamut))
-
+    def Is_enable_custom_gamut(self):
+        if self.custom_gamut.get("icc_file","CUSTOM")!="CUSTOM":
+            return True
+        return False
     def set_gamut(self,gamut="P3-D65"):
         # for tgamut, act in self.gamut_keys.items():
         #     act.setChecked(False)
         act = self.gamut_keys[gamut]
+        act.setEnabled(True)
         act.setChecked(True)
         self.cur_gamut=gamut
         for wid in self.widget_keys.values():
@@ -411,17 +436,51 @@ class App(QWidget):
         for k in self.hotkey_workeds.keys():
             self.hotkey_workeds[k]=False
 
+    def open_icc_viewer(self):
+        """
+        打开ICC配置查看器窗口
+        确保在当前窗口所在的显示器上打开，同时保持独立移动能力
+        """
+        if self.icc_viewer is None or not self.icc_viewer.isVisible():
+            self.icc_viewer = ICCViewerWidget()
+            
+            # 获取当前窗口的位置和大小
+            current_geometry = self.geometry()
+            
+            # 获取当前显示器的可用几何区域
+            desktop = QApplication.desktop()
+            screen_number = desktop.screenNumber(self)
+            screen_geometry = desktop.availableGeometry(screen_number)
+            
+            # 计算ICC窗口在当前显示器中的居中位置
+            icc_geometry = self.icc_viewer.geometry()
+            x = screen_geometry.center().x() - icc_geometry.width() // 2
+            y = screen_geometry.center().y() - icc_geometry.height() // 2
+            icc_geometry.moveTo(x, y)
+            self.icc_viewer.setGeometry(icc_geometry)
+            def on_icc_viewer_closed():
+                self.icc_viewer = None
+            # 连接到destroyed信号，当窗口对象被销毁时调用回调
+            self.icc_viewer.destroyed.connect(on_icc_viewer_closed)
+            self.icc_viewer.show()
+        else:
+            self.icc_viewer.activateWindow()
+    
     def set_Setting(self):
-        self.inhotkey=True
         loop = QEventLoop()
-
+        if self.setting_opened:
+            self.setting_diag.activateWindow()
+            return
         setting_diag=SettingDialog(self)
-        setting_diag.ColorSapce_Setting(self.gamuts,self.custom_gamut,self.cur_gamut)
+        self.setting_diag=setting_diag
+        setting_diag.ColorSapce_Setting(self.gamuts,self.custom_gamut.get("icc_file","CUSTOM"),self.cur_gamut)
         setting_diag.Record_Setting(self.record)
         setting_diag.Hotkey_Setting(self.func_hotkeys)
-        res=setting_diag.exec_()
+        self.setting_opened=True  # 标记对话框已打开
+        self.inhotkey=True
 
-        if res==QDialog.Accepted:
+        def on_setting_accepted():
+
             self.record.set_show_metrics(setting_diag.metrics)
             self.update_width()
             hot_keys=setting_diag.hot_keys
@@ -463,8 +522,15 @@ class App(QWidget):
                 if qtkeys:
                     self.hotkey_funcs[qtkeys_str] = [func, funcname, qtkeys]
                     self.hotkey_workeds[qtkeys_str] = False
-        self.inhotkey=False
-
+        def on_setting_closed():
+            self.inhotkey=False
+            self.setting_opened=False
+            self.setting_diag=None
+       
+        setting_diag.accepted.connect(on_setting_accepted)
+        setting_diag.finished.connect(on_setting_closed)
+        res=setting_diag.show()           
+        
         return
 
     def getCustomColor(self):

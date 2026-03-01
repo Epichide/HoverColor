@@ -23,3 +23,16 @@ def _get_file(relative_path):
         # 正常环境：使用当前文件所在目录, exe/interval/
         base_path = os.path.dirname(os.path.abspath(__file__))
         return os.path.abspath(os.path.join(base_path, "../",relative_path))
+
+
+def get_basename(filepath, sufix_keep=True):
+    basename = os.path.basename(filepath)
+    if sufix_keep: return basename
+    basename = os.path.splitext(basename)[0]
+    return basename
+
+
+def remove_keys(ddict, keys):
+    for key in keys:
+        if key in ddict:
+            ddict.pop(key)

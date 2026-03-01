@@ -1,0 +1,260 @@
+/* sysicc_viewer.css */
+/* ICC配置查看器样式表，基于setting_ICCTable.css和SettingDialog.css风格 */
+
+/* =============== 全局样式 =============== */
+QMainWindow {
+    background-color: #ffffff;
+    font-family: "Arial";
+    font-size: 13px;
+}
+
+/* =============== MonitorConfigWindow 和 ICCViewerWidget 样式 =============== */
+MonitorConfigWindow,
+ICCViewerWidget {
+    background-color: #ffffff;
+}
+
+/* =============== 中央组件样式 =============== */
+MonitorConfigWindow>QWidget,
+ICCViewerWidget>QWidget {
+    background-color: #ffffff;
+}
+
+/* =============== QGroupBox 样式 =============== */
+QGroupBox {
+    background-color: #ffffff;
+    border: 1px solid #A0C3DC;
+    border-radius: 4px;
+    margin-top: 8px;
+    padding: 10px;
+}
+
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 4px;
+    background-color: #ffffff;
+    color: #333;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+/* =============== QPushButton 样式 =============== */
+QPushButton {
+    background-color: #DBE7F1;
+    color: #333;
+    border: 1px solid #A0C3DC;
+    border-radius: 4px;
+    padding: 4px 12px;
+    margin: 0 4px;
+    font-family: "Arial";
+    font-size: 13px;
+}
+
+QPushButton:hover {
+    background-color: #cfe8ff;
+}
+
+QPushButton:pressed {
+    background-color: #b3d9ff;
+}
+
+/* =============== QLabel 样式 =============== */
+QLabel {
+    color: #333;
+    font-family: "Arial";
+    font-size: 13px;
+    spacing: 4px;
+}
+
+/* =============== 标题样式 =============== */
+QLabel#title_label {
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+}
+
+/* =============== QTableWidget 样式 =============== */
+QTableWidget {
+    border: 1px solid #A0C3DC;
+    border-radius: 4px;
+    gridline-color: #A0C3DC;
+    background-color: #ffffff;
+    alternate-background-color: #f7fbff;
+}
+
+QTableWidget::item {
+    padding: 1px 1px;
+    border: 1px solid #DBE7F1;
+    color: #333;
+    background-color: transparent;
+    font-family: "Arial";
+    font-size: 12px;
+}
+
+QHeaderView::section {
+    background-color: #DBE7F1;
+    border: 1px solid #A0C3DC;
+    font-weight: bold;
+    color: #333;
+    padding: 4px 6px;
+    border-left: none;
+    font-family: "Arial";
+    font-size: 12px;
+}
+
+QHeaderView::section:first {
+    border-left: 1px solid #A0C3DC;
+}
+
+QTableWidget::item:selected {
+    background-color: #cfe8ff;
+    color: #333;
+}
+
+QTableWidget::item:hover {
+    background-color: #f0f7ff;
+}
+
+/* =============== QScrollArea 样式 =============== */
+QScrollArea {
+    border: none;
+    background-color: #ffffff;
+}
+
+/* =============== 滚动区域内容样式 =============== */
+QScrollArea>QWidget>QWidget {
+    background-color: #ffffff;
+}
+
+/* =============== 滚动条交叉角落区域样式 =============== */
+QScrollArea QAbstractScrollArea::corner,
+QAbstractScrollArea::corner {
+    background-color: #ffffff;
+    border: none;
+}
+
+/* =============== 滚动条样式 =============== */
+/* 滚动条整体样式 */
+QScrollBar:vertical {
+    border: 1px solid gray;
+    background-color: #f5f7fa;
+    width: 8px;
+    margin: 0px;
+}
+
+QScrollBar:horizontal {
+    border: 1px solid gray;
+    background-color: #f5f7fa;
+    height: 8px;
+    margin: 0px;
+}
+
+/* 滚动条滑块样式 */
+QScrollBar::handle:vertical {
+    background-color: #A0C3DC;
+    border-radius: 4px;
+    margin: 0 1px 0 1px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #A0C3DC;
+    border-radius: 4px;
+    margin: 1px 0 1px 0;
+    min-width: 20px;
+}
+
+/* 滑块悬停效果 */
+QScrollBar::handle:vertical:hover,
+QScrollBar::handle:horizontal:hover {
+    background-color: #99cef9;
+}
+
+/* 滚动条两端按钮样式 */
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical,
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    background-color: transparent;
+    width: 0;
+    height: 0;
+}
+
+/* 滚动条凹槽样式 */
+QScrollBar::sub-page:vertical,
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:horizontal,
+QScrollBar::add-page:horizontal {
+    background-color: transparent;
+}
+
+
+
+/* =============== QRadioButton 和 ICCRadio 样式 =============== */
+QRadioButton {
+
+    spacing: 4px;
+    font-family:  "Arial"; /* 字体调整，适应截图风格 */
+    font-size: 18px; /* 字体大小调整，适应截图风格 */
+
+}
+QRadioButton::indicator::unchecked{
+    border: 1px solid #A0C3DC;
+    border-radius: 6px;
+    background-color: white;
+
+}
+
+/* =============== QCheckBox 样式 =============== */
+QCheckBox {
+    color: #333;
+    spacing: 4px;
+    font-family: "Arial";
+    font-size: 13px;
+}
+
+QCheckBox::indicator {
+    width: 14px;
+    height: 14px;
+    border: 1px solid #A0C3DC;
+    border-radius: 2px;
+    background-color: white;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #4da6ff;
+}
+
+QCheckBox::indicator:checked::after {
+    content: "✓";
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    font-size: 10px;
+}
+
+QCheckBox:hover::indicator {
+    border-color: #66b2ff;
+}
+
+QCheckBox:disabled {
+    color: #999;
+}
+
+QCheckBox:disabled::indicator {
+    border-color: #ccd9e5;
+    background-color: #f5f7fa;
+}
+
+/* =============== ConfigTableWidget 样式 =============== */
+/* 继承QTableWidget样式，只定义不同的部分 */
+ConfigTableWidget {
+    /* 与QTableWidget相同，无需重复定义 */
+}
+
+ConfigTableWidget::item {
+    /* 只修改与QTableWidget不同的padding */
+    padding: 2px 4px;
+    /* 其他样式继承自QTableWidget */
+}

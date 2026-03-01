@@ -7,12 +7,23 @@
 # @Software: PyCharm
 
 import sys
-
-from PyQt5.QtCore import QSize
+import numpy as np
+from PyQt5 import QtCore
+from PyQt5.QtCore import QSize, Qt, QRect
+from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import (QApplication, QWidget, QGridLayout,
-                             QPushButton, QVBoxLayout, QHBoxLayout)
-from PyQt5.QtWidgets import QLayout, QWidget, QSizePolicy
-from PyQt5.QtCore import Qt, QRect, QSize
+                             QPushButton, QVBoxLayout, QHBoxLayout, QScrollArea, QTabWidget)
+from PyQt5.QtWidgets import QLayout, QSizePolicy, QGroupBox
+
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
+
+
+
+# 设置 matplotlib 支持中文显示
+plt.rcParams["font.family"] = ["SimHei"]
+plt.rcParams["axes.unicode_minus"] = False  # 解决负号显示问题
 
 class DynamicGridLayout(QHBoxLayout):
     def __init__(self, parent=None, max_cols=3):
@@ -163,3 +174,54 @@ class QFlowLayout(QLayout):
             lineHeight = max(lineHeight, item.sizeHint().height())
 
         return y + lineHeight - rect.y() + margin
+
+
+class ScrollSubTab(QtWidgets.QScrollArea):
+    def __init__(self,parent=None):
+        super(ScrollSubTab,self).__init__(parent)
+        # css profile all information
+        self.setWidgetResizable(True)
+        self.setMinimumHeight(300)
+        self.setMinimumWidth(100)
+        self.info_scroll_wid = QtWidgets.QWidget(self)
+        # self.info_scroll_wid 居中
+        self.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter|QtCore.Qt.AlignTop )  # 设置滚动区域的对齐方式
+
+        self.setWidget(self.info_scroll_wid)
+        self.info_scroll_wid.setSizePolicy(
+            QtWidgets.QSizePolicy.MinimumExpanding,  # 水平方向保持默认
+            QtWidgets.QSizePolicy.MinimumExpanding  # 垂直方向根据内容调整
+        )
+        # 创建布局并设置对齐方式（布局才有 setAlignment 方法）
+        layout = QVBoxLayout(self.info_scroll_wid)  # 布局直接关联到 info_scroll_wid
+        # layout.setAlignment(Qt.AlignVCenter | Qt.AlignHCenter)  # 布局内控件的对齐方式
+        layout.setAlignment(QtCore.Qt.AlignTop | QtCore.Qt.AlignLeft)
+
+        self.widget().setLayout(layout)
+
+    def layout(self):
+        return self.widget().layout()
+
+    def resizeEvent(self, event):
+        """重写尺寸变化事件，动态调整列宽"""
+        # 忽略初始加载时的尺寸事件（避免覆盖手动设置）
+        self.info_scroll_wid.setFixedWidth(self.width()*0.95)
+        super().resizeEvent(event)
+
+
+class ScrollTab(QtWidgets.QTabWidget):
+    def __init__(self,parent=None):
+        super(ScrollTab,self).__init__(parent)
+
+    def add_tab(self, tabname, wid=None):
+        if wid:
+            tab = wid
+        else:
+            tab = ScrollSubTab(self)
+            tab.setObjectName(tabname)
+        self.addTab(tab, "")
+        self.setTabText(self.indexOf(tab), tabname)
+        return tab
+
+
+       
