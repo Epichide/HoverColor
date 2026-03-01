@@ -220,7 +220,7 @@ class ICCViewerWidget(QMainWindow):
         self.create_info_groups()
         
         # 将widget添加为标签页
-        self.tab_widget.addTab(self.monitor_config_widget, "显示器配置")
+        self.tab_widget.addTab(self.monitor_config_widget, "Monitor Config")
         
         self.gamuts_scroll_tab = ScrollSubTab()
         # self, gamuts, custom_gamut, cur_gamut
@@ -229,7 +229,7 @@ class ICCViewerWidget(QMainWindow):
         # self.tab_widget.addTab(AnotherWidget(), "其他功能")
         
         # 设置窗口标题
-        self.setWindowTitle("ICC配置查看器")
+        self.setWindowTitle("Monitor ICC Viewer ")
         
         # 手动触发显示器信息更新
         self.update_monitor_info()
@@ -258,37 +258,37 @@ class ICCViewerWidget(QMainWindow):
         创建显示器信息的各个分组
         """
         # 显示器基本信息组
-        self.monitor_info_group = QGroupBox("显示器基本信息")
+        self.monitor_info_group = QGroupBox("Monitor Basic Info")
         self.monitor_info_layout = QGridLayout()
         self.monitor_info_group.setLayout(self.monitor_info_layout)
         self.scroll_layout.addWidget(self.monitor_info_group)
         
         # 最终生效配置组
-        self.final_config_group = QGroupBox("最终生效配置")
+        self.final_config_group = QGroupBox("Final Effective Config")
         self.final_config_layout = QVBoxLayout()
         self.final_config_group.setLayout(self.final_config_layout)
         self.scroll_layout.addWidget(self.final_config_group)
         
         # 用户级配置组
-        self.user_config_group = QGroupBox("显示器用户级配置")
+        self.user_config_group = QGroupBox("USER Monitor Config")
         self.user_config_layout = QVBoxLayout()
         self.user_config_group.setLayout(self.user_config_layout)
         self.scroll_layout.addWidget(self.user_config_group)
         
         # 系统级配置组
-        self.system_config_group = QGroupBox("显示器系统级配置")
+        self.system_config_group = QGroupBox("SYSTEM Monitor Config")
         self.system_config_layout = QVBoxLayout()
         self.system_config_group.setLayout(self.system_config_layout)
         self.scroll_layout.addWidget(self.system_config_group)
         
         # Windows 用户级配置情况组
-        self.windows_user_config_group = QGroupBox("Windows 用户级配置情况")
+        self.windows_user_config_group = QGroupBox("Windows USER Config Situation")
         self.windows_user_config_layout = QVBoxLayout()
         self.windows_user_config_group.setLayout(self.windows_user_config_layout)
         self.scroll_layout.addWidget(self.windows_user_config_group)
         
         # Windows 系统级配置情况组
-        self.windows_system_config_group = QGroupBox("Windows 系统级配置情况")
+        self.windows_system_config_group = QGroupBox("Windows SYSTEM Config Situation")
         self.windows_system_config_layout = QVBoxLayout()
         self.windows_system_config_group.setLayout(self.windows_system_config_layout)
         self.scroll_layout.addWidget(self.windows_system_config_group)
@@ -477,7 +477,7 @@ class ICCViewerWidget(QMainWindow):
                 sdr_content += f"{i}. {filename}{is_default}\n"
         else:
             sdr_content = "无"
-        rows.append(["用户SDR ICC配置", sdr_content.strip()])
+        rows.append(["USER SDR ICC配置", sdr_content.strip()])
         
         # 添加用户HDR配置
         hdr_content = ""
@@ -488,7 +488,7 @@ class ICCViewerWidget(QMainWindow):
                 hdr_content += f"{i}. {filename}{is_default}\n"
         else:
             hdr_content = "无"
-        rows.append(["用户HDR ICC配置", hdr_content.strip()])
+        rows.append(["USER HDR ICC配置", hdr_content.strip()])
         
         # 使用自定义表格类
         table_widget = ConfigTableWidget()
@@ -534,7 +534,7 @@ class ICCViewerWidget(QMainWindow):
                 hdr_content += f"{i}. {filename}{is_default}\n"
         else:
             hdr_content = "无"
-        rows.append(["系统HDR ICC配置", hdr_content.strip()])
+        rows.append(["SYSTEM HDR ICC配置", hdr_content.strip()])
         
         # 使用自定义表格类
         table_widget = ConfigTableWidget()
@@ -595,7 +595,7 @@ class ICCViewerWidget(QMainWindow):
             for k, v in user_win_profiles.items():
                 rows.append([f"{k}", Path(v).name if v else "无"])
         else:
-            rows.append(["Windows用户级默认配置", "无"])
+            rows.append(["Windows USER 默认配置", "无"])
         
         # 使用自定义表格类
         table_widget = ConfigTableWidget()
