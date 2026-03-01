@@ -149,17 +149,17 @@ class App(QWidget):
         self.font_box.valueChanged.connect(lambda value: self.set_font_size(value))
         self.zoom_box.valueChanged.connect(lambda value:self.set_zoom_size(value/100))
         self.lock_box.valueChanged.connect(lambda value: setattr(self, 'loss_hover_opacity', value/100))
-        self.action_setting = QAction("设置", self)
+        self.action_setting = QAction("Setting", self)
         self.menu.addAction(self.action_setting)
         self.action_setting.triggered.connect(self.set_Setting)
         
         # 添加ICC查看器菜单项
         self.menu.addSeparator()
-        self.action_icc_viewer = QAction("显示器ICC查看", self)
+        self.action_icc_viewer = QAction("Monitor ICCViewer", self)
         self.menu.addAction(self.action_icc_viewer)
         self.action_icc_viewer.triggered.connect(self.open_icc_viewer)
 
-        self.action_quit=QAction("退出",self)
+        self.action_quit=QAction("Quit",self)
         self.menu.addAction(self.action_quit)
         self.action_quit.triggered.connect(self.close)
         self.action_quit.triggered.connect(self.log_profile)

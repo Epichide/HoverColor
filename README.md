@@ -21,6 +21,9 @@ example
   - visualization of 3D gamut （maybe openGL？）
   - support the optional visualization of record （when there are no metrics to display）
   - P3-D65 not be equal to display P3  ： https://en.wikipedia.org/wiki/DCI-P3 （please fix bug）
+
+- 20260302
+  - feature: new widget: ICCViewerWidget - automatically detect and load the ICC profile associated with the Windows system monitor
 - 20260226
   - fix bug: crash when loading 1D curve ICC profiles
   - feature: support extracting ICC profiles from images containing embedded ICC profiles
