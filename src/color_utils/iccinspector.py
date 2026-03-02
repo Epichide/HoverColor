@@ -12,8 +12,10 @@ import textwrap
 
 import numpy as np
 
-
-from src.color_utils.color_utils import *
+try:
+    from src.color_utils.color_utils import *
+except ImportError:
+    from color_utils import *
 
 _colorspacesignatures = {
     "XYZ ": "nCIEXYZ or PCSXYZ",
@@ -422,6 +424,11 @@ class curvType(iccProfileElement):
             self._curve,
         )
 
+
+
+## ----------------------
+#   CUSTOM FUNCTIONS
+## ----------------------
 def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
     """
     :param curvetype:  para or curve
@@ -429,7 +436,7 @@ def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
     :param parameters:
     :return:
     """
-    print("解析中", curvetype, _funcid)
+    # print("解析中", curvetype, _funcid)
 
     x=np.linspace(0,1,100)
     if curvetype=="para":
@@ -519,122 +526,7 @@ def get_plot_xy(curvetype="para",_funcid=0,parameters={}):
     x=gamma_func(y)
     return x,y, degamma_func, gamma_func
 
-def load_rgb_custom_icc(icc_file):
-    try:
-        with open(icc_file, 'rb') as f:
-            # 读取文件内容到内存视图
-            s = memoryview(f.read())
-        testField = iccProfile()
-        testField.read(s)
-        ddict = testField.get_info()
-    except Exception as e:
-        raise
-        print(f"解析 ICC 失败: {e}")
-        raise Exception(f"解析 ICC 失败: {e}")
 
-    gamut_TRC_info = {}
-    gamut_profile_info = {}
-    if ddict["ProfileDeviceClass"][0] in ["mntr"]:
-        RGB, linearRGB = ddict["TRC"]["xy"]
-        function_str = ddict["TRC"]["function"]
-        parameters = ddict["TRC"]["parameters"]
-        curvetype = ddict["TRC"]["curvetype"]
-        funcid = ddict["TRC"]["funcid"]
-
-        # profile_info
-        gamut_TRC_info = {
-            "TRC-degamma": (RGB, linearRGB),
-            "TRC-gamma": (linearRGB, RGB)
-        }
-        custom_gamut = {
-            "Gamut Type": "icc",
-            "WP illuminant": ddict["WP_Illuminant"],  # White point
-            "WP xy": ddict["WP_xyY"],
-            "WP XYZ_Y1": ddict["WP_XYZ"],
-            # the media white point of a Display class profile ;
-            # media white point
-            # https://www.color.org/whyd50.xalter
-            "WP RGB2XYZ_matrix": np.round(ddict["WP_RGB2XYZ_matix"], 4),
-            "WP XYZ2RGB_matrix": np.round(ddict["WP_XYZ2RGB_matrix"], 4),
-            "TRC Function": function_str,
-            "TRC Parameters": parameters,
-            "TRC Type": curvetype,
-            "TRC FuncID": funcid,
-            # PCS info
-            "PCS Illuminant": ddict["PCS_Illuminant"],
-            "PCS xy": ddict["PCS_xyY"],
-            "PCS XYZ_Y1": ddict["PCS_XYZ"],
-        }
-
-    White_ILLUMINANTS_xy["CUSTOM"] = custom_gamut["WP xy"][:2]
-    global RGB2XYZ_M_CACHE
-    global Degamma_func_CACHE
-    global Gamma_func_CACHE
-    RGB2XYZ_M_CACHE["CUSTOM"] = custom_gamut["WP RGB2XYZ_matrix"],ddict["WP_Illuminant"]
-    RGB2XYZ_M_CACHE["CUSTOM-INV"] = custom_gamut["WP XYZ2RGB_matrix"],ddict["WP_Illuminant"]
-    x, y, degamma_func, gamma_func = get_plot_xy(
-        curvetype=custom_gamut["TRC Type"],
-        _funcid=custom_gamut["TRC FuncID"],
-        parameters=custom_gamut["TRC Parameters"],
-    )
-    Degamma_func_CACHE["CUSTOM"] = degamma_func
-    Gamma_func_CACHE["CUSTOM"] = gamma_func
-
-def update_custom_icc(custom_gamut:dict={},skip_lab_proj=False):
-    if not custom_gamut :return
-    White_ILLUMINANTS_xy["CUSTOM"] = custom_gamut["WP xy"][:2]
-    white_XYZ=get_white_point_XYZ(White_ILLUMINANTS_xy["CUSTOM"])
-    global RGB2XYZ_M_CACHE
-    global Degamma_func_CACHE
-    global Gamma_func_CACHE
-    RGB2XYZ_M_CACHE["CUSTOM"] = custom_gamut["WP RGB2XYZ_matrix"],white_XYZ
-    RGB2XYZ_M_CACHE["CUSTOM-INV"] = custom_gamut["WP XYZ2RGB_matrix"],white_XYZ
-    x,y, degamma_func, gamma_func = get_plot_xy(
-        curvetype=custom_gamut["TRC Type"],
-        _funcid=custom_gamut["TRC FuncID"],
-        parameters=custom_gamut["TRC Parameters"],
-    )
-    Degamma_func_CACHE["CUSTOM"] = degamma_func
-    Gamma_func_CACHE["CUSTOM"] = gamma_func
-    # print(RGB2XYZ_M_CACHE["CUSTOM"])
-    # print(RGB2XYZ_M_CACHE["CUSTOM-INV"])
-    # generate canvas img
-    # 简易进度条对话框
-    if skip_lab_proj: return
-    from PyQt5.QtWidgets import QDialog, QProgressBar, QVBoxLayout, QLabel, QApplication
-    from PyQt5.QtCore import Qt, QEventLoop, QTimer
-    from src.Lab import create_lab_proj_cus
-    from src.XYZ import create_xyz_proj_cus
-    app = QApplication.instance() or QApplication([])
-    progress_dialog = QDialog()
-    progress_dialog.setWindowFlags(progress_dialog.windowFlags() | Qt.WindowStaysOnTopHint)
-    progress_dialog.setWindowTitle("处理中")
-    progress_dialog.setFixedSize(300, 80)
-    progress_dialog.setWindowModality(Qt.ApplicationModal)
-
-    # 布局和控件
-    layout = QVBoxLayout(progress_dialog)
-    layout.addWidget(QLabel("生成投影图，请稍候..."))
-
-    progress_bar = QProgressBar()
-    progress_bar.setRange(0, 100)
-    progress_bar.setValue(0)
-    layout.addWidget(progress_bar)
-
-    progress_dialog.show()
-    app.processEvents()  # 刷新界面显示
-
-    # 第一个任务
-    progress_bar.setValue(30)
-    app.processEvents()  # 刷新界面显示
-    create_lab_proj_cus(gamut="CUSTOM")
-    # 第二个任务
-    progress_bar.setValue(70)
-    app.processEvents()
-    create_xyz_proj_cus(gamut="CUSTOM")
-    # 完成
-    progress_bar.setValue(100)
-    progress_dialog.close()
 
 
 
@@ -1665,7 +1557,7 @@ class iccProfile:
             string += str(var)
         return string
 
-    ##--CUSTOM FUNC
+    ##--CUSTOM FUNC:Epichide
     def get_info(self):
         ddict = {}
 
@@ -2043,7 +1935,7 @@ def get_near_illuminant(xy_value):
     WP_Illuminant=None
     min_dis=1
     for illuminant,illuminant_xy in White_ILLUMINANTS_xy.items():
-        if illuminant=="CUSTOM":continue
+        if illuminant=="CUSTOM" or "icc" in illuminant or "icm" in illuminant:continue
         dis=np.linalg.norm(xy_value-illuminant_xy)
         if dis<min_dis:
             min_dis=dis
@@ -2068,7 +1960,7 @@ if __name__ == "__main__":
         parser = argparse.ArgumentParser(prog="iccinspector")
         parser.add_argument("iccfile",
                             nargs="?", type=argparse.FileType("rb"),
-                            default=r"profiles/Display P3.css")
+                            default=r"D:\material\DATA\icc\profiles\AdobeCompat-v4.icc")
         # parser.add_argument("iccfile",
         #                     nargs="?", type=argparse.FileType("rb"),
         #                     default=r"profiles/AdobeRGB1998.css")

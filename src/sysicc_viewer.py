@@ -172,6 +172,13 @@ class ICCViewerWidget(QMainWindow):
             # 延迟更新显示器信息（确保窗口已经稳定）
             QTimer.singleShot(300, self.update_monitor_info)
     
+    def update_selected_icc_label(self, selected_gamut):
+        """
+        更新选中ICC标签的显示内容
+        :param selected_gamut: 当前选中的gamut名称
+        """
+        self.selected_icc_label.setText(f"当前选中: {selected_gamut}")
+    
     def init_ui(self):
         """
         初始化用户界面，创建QTabWidget并添加显示器配置信息作为标签页
@@ -183,9 +190,17 @@ class ICCViewerWidget(QMainWindow):
         # 创建主布局
         main_layout = QVBoxLayout(central_widget)
         
-        # 创建顶部布局，用于放置刷新按钮
+        # 创建顶部布局，用于放置选中ICC信息和刷新按钮
         top_layout = QHBoxLayout()
-        top_layout.addStretch()  # 添加伸缩项，将按钮推到右侧
+        
+        # 添加选中ICC信息标签
+        self.selected_icc_label = QLabel("当前选中: 无")
+        self.selected_icc_label.setFont(QFont("Arial", 10))
+        self.selected_icc_label.setStyleSheet("color: #333;")
+        top_layout.addWidget(self.selected_icc_label)
+        
+        # 添加伸缩项，将按钮推到右侧
+        top_layout.addStretch()
         
         # 创建刷新按钮
         self.refresh_button = QPushButton("🔄️ 刷新")
@@ -376,7 +391,16 @@ class ICCViewerWidget(QMainWindow):
             
             # 创建新的GamutsViewer
             self.gamuts_viewer = GamutsViewer(self, self.gamut_iccs, self.cur_gamut_icc)
+            
+            # 连接gamut_selected信号
+            self.gamuts_viewer.gamut_selected.connect(self.update_selected_icc_label)
+            
             self.gamuts_scroll_tab.layout().addWidget(self.gamuts_viewer)
+            
+            # 初始化选中ICC标签
+            selected_gamut = self.gamuts_viewer.get_selected_gamut()
+            if selected_gamut:
+                self.update_selected_icc_label(selected_gamut)
             
             # 如果标签页还没有添加，则添加它
             if self.gamuts_tab_index == -1:

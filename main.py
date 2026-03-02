@@ -14,7 +14,7 @@ from src.YUV import YUVChart
 from src.Lab import LabChart
 # from src.Jch import JchChart
 from src.XYZ import XYZChart
-from src.color_utils.iccinspector import update_custom_icc
+from src.color_utils.icc_extend import update_custom_icc_cache_proj
 from src.hue import HueChart
 from src.record import RecordForm
 from src.screenshoot import Screenshoot
@@ -388,7 +388,7 @@ class App(QWidget):
             for k,v in self.custom_gamut.items():
                 if isinstance(v,list):
                     self.custom_gamut[k]=np.array(v)
-        update_custom_icc(self.custom_gamut,skip_lab_proj=True)
+        update_custom_icc_cache_proj(self.custom_gamut,skip_lab_proj=True)
 
         # load gamut
         self.set_gamut(gamut=self.profile["gamut"])
@@ -488,7 +488,7 @@ class App(QWidget):
             custom_gamut=setting_diag.custom_gamut
             if (custom_gamut and
                     _get_file(custom_gamut["icc_file"])!=_get_file(self.custom_gamut.get("icc_file",None))):# load new icc
-                update_custom_icc(custom_gamut)
+                update_custom_icc_cache_proj(custom_gamut)
                 icc_file = custom_gamut.get("icc_file", None)
 
                 # copy to resource

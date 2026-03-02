@@ -15,7 +15,7 @@ from src.color_utils.color_utils import color_RGB_to_XYZ, color_RGB_to_linearRGB
 import math
 import  sys,os
 
-from src.color_utils.iccinspector import load_rgb_custom_icc
+from src.color_utils.icc_extend import load_custom_icc
 
 
 

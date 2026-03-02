@@ -31,7 +31,7 @@ from .record import RecordForm
 from .color_utils.color_utils import *
 from .wid_utils.hotkeys_utils.hotkey_wid import HotKeyWindow
 from .utils.file_utils import _get_file
-from .color_utils.icc import load_icc, save_icc, warp_file
+from .color_utils.iccinspector_builtin import load_icc, save_icc, warp_file
 from .wid_utils.basewid_utils import ScrollTab
 from .wid_utils.icc_wid import ICCProfile, ICCRadio
 from .wid_utils.gamutsviewer_wid import GamutsViewer

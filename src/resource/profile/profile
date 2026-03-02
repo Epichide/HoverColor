@@ -1,19 +1,19 @@
 {
     "colorspace": {
         "RGB": true,
-        "HSV": false,
-        "Lab": false,
-        "XYZ": false,
+        "HSV": true,
+        "Lab": true,
+        "XYZ": true,
         "YUV": true,
         "Record": true
     },
     "hotkeys": {
         "Screen Pick": [
-            16777249,
+            16777251,
             96
         ],
         "Pixel Pick": [
-            16777251,
+            16777249,
             96
         ],
         "Reset Range": [
@@ -29,14 +29,79 @@
             50
         ]
     },
-    "gamut": "Rec.709",
-    "zoom": 92.0,
+    "gamut": "CUSTOM",
+    "zoom": 100.0,
     "metrics": [
         "RGB",
         "XYZ",
-        "HSV"
+        "Lab"
     ],
-    "custom_gamut": {},
-    "fontsize": 13,
-    "loss_hover_opacity": 1.0
+    "custom_gamut": {
+        "icc_file": "resource/profile/custom_icc.icc",
+        "Gamut Type": "icc",
+        "WP illuminant": "Near D65",
+        "WP xy": [
+            0.3127004924772963,
+            0.32900093876915826,
+            1.0
+        ],
+        "WP XYZ_Y1": [
+            0.9504547119140621,
+            1.0,
+            1.0890502929687498
+        ],
+        "WP RGB2XYZ_matrix": [
+            [
+                0.5767,
+                0.1856,
+                0.1882
+            ],
+            [
+                0.2973,
+                0.6274,
+                0.0753
+            ],
+            [
+                0.027,
+                0.0707,
+                0.9913
+            ]
+        ],
+        "WP XYZ2RGB_matrix": [
+            [
+                2.0416,
+                -0.565,
+                -0.3447
+            ],
+            [
+                -0.9692,
+                1.876,
+                0.0415
+            ],
+            [
+                0.0134,
+                -0.1183,
+                1.0152
+            ]
+        ],
+        "TRC Function": "Y =X**g",
+        "TRC Parameters": {
+            "g": 2.19921875
+        },
+        "TRC Type": "curve",
+        "TRC FuncID": 1,
+        "PCS Illuminant": "Near D50",
+        "PCS xy": [
+            0.34570292198022834,
+            0.3585375327567059,
+            1.0
+        ],
+        "PCS XYZ_Y1": [
+            0.964202880859375,
+            1.0,
+            0.8249053955078125
+        ]
+    },
+    "fontsize": 8,
+    "loss_hover_opacity": 0.2
 }

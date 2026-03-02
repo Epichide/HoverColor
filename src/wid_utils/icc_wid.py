@@ -21,9 +21,10 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
 from ..color_utils.iccinspector import iccProfile
+from ..color_utils.icc_extend import update_custom_icc_cache_proj,load_custom_icc
 from ..color_utils.color_utils import *
 from ..utils.file_utils import _get_file, get_basename, remove_keys
-from ..color_utils.icc import load_icc, save_icc, warp_file
+from ..color_utils.iccinspector_builtin import load_icc, save_icc, warp_file
 from .basewid_utils import ScrollSubTab
 
 # 设置 matplotlib 支持中文显示
@@ -715,60 +716,20 @@ class ICCRadio(QtWidgets.QRadioButton):
         """
         # 打开并读取文件
         self.icc_file=_get_file(iccfile)
+        # 精炼信息和全量信息
         try:
-            with open(iccfile, 'rb') as f:
-                # 读取文件内容到内存视图
-                s = memoryview(f.read())
-            testField = iccProfile()
-            testField.read(s)
-            ddict = testField.get_info()
+            gamut_profile_info,gamut_TRC_info,ddict=load_custom_icc(iccfile,IS_update_custom=False)
         except Exception as e:
             print(f"解析 ICC 失败: {e}")
             raise Exception(f"解析 ICC 失败: {e}")
 
-        gamut_TRC_info = {}
-        gamut_profile_info = {}
-        if ddict["ProfileDeviceClass"][0] in [ "mntr"]:
-            RGB, linearRGB = ddict["TRC"]["xy"]
-            function_str= ddict["TRC"]["function"]
-            parameters = ddict["TRC"]["parameters"]
-            curvetype= ddict["TRC"]["curvetype"]
-            funcid = ddict["TRC"]["funcid"]
-
-            # profile_info
-            gamut_TRC_info = {
-                "TRC-degamma": (RGB, linearRGB),
-                "TRC-gamma": (linearRGB, RGB)
-            }
-
-            gamut_profile_info = {
-                "Gamut" : get_basename(iccfile, sufix_keep=True),
-                "Gamut Type" : "icc",
-                "WP illuminant": ddict["WP_Illuminant"],  # White point
-                "WP xy": ddict["WP_xyY"],
-                "WP XYZ_Y1": ddict["WP_XYZ"],
-                # the media white point of a Display class profile ;
-                # media white point
-                # https://www.color.org/whyd50.xalter
-                "WP RGB2XYZ_matrix": np.round(ddict["WP_RGB2XYZ_matix"], 4),
-                "WP XYZ2RGB_matrix": np.round(ddict["WP_XYZ2RGB_matrix"], 4),
-                "TRC Function" : function_str,
-                "TRC Parameters": parameters,
-                "TRC Type": curvetype,
-                "TRC FuncID": funcid,
-                # PCS info
-                "PCS Illuminant": ddict["PCS_Illuminant"],
-                "PCS xy": ddict["PCS_xyY"],
-                "PCS XYZ_Y1": ddict["PCS_XYZ"],
-            }
-
-        removekeys = ["TRC", "WP_Illuminant",
-                      "WP_xyY", "WP_XYZ",
-                      "PCS_Illuminant", "PCS_xyY",
-                      "PCS_XYZ", "WP_RGB2XYZ_matix",
-                      "WP_XYZ2RGB_matrix"]
-        remove_keys(ddict, removekeys)
-        ddict["ProfileName"] = get_basename(iccfile)
+        # removekeys = ["TRC", "WP_Illuminant",
+        #               "WP_xyY", "WP_XYZ",
+        #               "PCS_Illuminant", "PCS_xyY",
+        #               "PCS_XYZ", "WP_RGB2XYZ_matix",
+        #               "WP_XYZ2RGB_matrix"]
+        # remove_keys(ddict, removekeys)
+        
         return gamut_profile_info, gamut_TRC_info, ddict
 
     def parse_gamut_profile(self, gamut="P3-D65"):
@@ -835,7 +796,6 @@ class ICCRadio(QtWidgets.QRadioButton):
             self.click()
 
     def get_gamut(self):
-        self.profile_info["icc_file"] = self.icc_file
         if self.itype == "icc" and self.name_or_file=="":
             return None
         else:
@@ -1015,8 +975,14 @@ class ICCProfile(QWidget):
 
         tag_row = 0  # 表格行索引
         head_row=0
-
+        removekeys = ["TRC", "WP_Illuminant",
+                    "WP_xyY", "WP_XYZ",
+                    "PCS_Illuminant", "PCS_xyY",
+                    "PCS_XYZ", "WP_RGB2XYZ_matix",
+                    "WP_XYZ2RGB_matrix"]
+    
         for key, value in self.icc_dict.items():
+            if key in removekeys: continue
             if "TagTable" in key:
                 # 处理标签表格数据
                 for tkey, tvalue in value.items():

@@ -12,6 +12,8 @@
 # from colour.models import xy_to_XYZ, xy_to_xyY, xyY_to_XYZ
 import numpy as np
 # from colour.models.rgb import RGB_COLOURSPACES, RGB_to_XYZ, XYZ_to_RGB
+UPDATE_TIME_CACHE={}
+CUSTOM_GAMUT_CACHE={}
 RGB2XYZ_M_CACHE={
     # "CUSTOM":np.array([[ 0.4866,  0.2657 , 0.1982],
     #  [ 0.229 ,  0.6917 , 0.0793],

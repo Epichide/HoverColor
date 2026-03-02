@@ -15,7 +15,12 @@ from .icc_wid import ICCProfile, ICCRadio
 from ..utils.file_utils import _get_file
 from .flow_wid import FlowLayout
 
+from PyQt5.QtCore import pyqtSignal
+
 class GamutsViewer(QWidget):
+    # 定义信号，当选中的gamut变化时触发
+    gamut_selected = pyqtSignal(str)
+    
     def __init__(self, parent=None, gamuts=[], cur_gamut=""):
         super(GamutsViewer, self).__init__(parent)
         self.gamuts = gamuts
@@ -69,8 +74,8 @@ class GamutsViewer(QWidget):
             self.gamut_button_group.addButton(gamut_radio, n)
             self.gamut_selection_layout.addWidget(gamut_radio)
             self.gamut_radios.append(gamut_radio)
-            
             if gamut == self.cur_gamut:
+                print("click",gamut,self.cur_gamut)
                 gamut_radio.click()
         
         # 设置选择区域的大小策略
@@ -97,12 +102,14 @@ class GamutsViewer(QWidget):
         for radio in self.gamut_radios:
             if radio.isChecked():
                 self.gamut_info.update_profile(radio)
+                # 发射信号通知父窗口
+                self.gamut_selected.emit(radio.text())
                 break
     
     def get_selected_gamut(self):
         for radio in self.gamut_radios:
             if radio.isChecked():
-                return radio.get_gamut()
+                return radio.text()
         return None
     
     def get_custom_gamut(self):
