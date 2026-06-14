@@ -18,8 +18,11 @@ from typing import Optional, Dict
 # 添加当前目录到Python路径，确保可以导入windows_usr_sys_icc_reg模块
 
 # 导入现有的ICC配置库
-from . import windows_usr_sys_icc_reg as icc_utils
-from .windows_usr_sys_icc_reg import HKLM, winreg,analyze
+try:
+    from . import windows_usr_sys_icc_reg as icc_utils
+except ImportError:
+    import windows_usr_sys_icc_reg as icc_utils
+
 
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                                 QHBoxLayout, QLabel, QTextEdit, QFrame, QScrollArea,
@@ -303,9 +306,9 @@ class MonitorConfigWindow(QMainWindow):
             monitor_guid = icc_utils.MONITOR_CLASS_GUID
             class_path = f"SYSTEM\\CurrentControlSet\\Control\\Class\\{monitor_guid}"
             
-            with winreg.OpenKey(HKLM, class_path) as class_key:
-                for i in range(winreg.QueryInfoKey(class_key)[0]):
-                    subkey_name = winreg.EnumKey(class_key, i)
+            with icc_utils.winreg.OpenKey(icc_utils.HKLM, class_path) as class_key:
+                for i in range(icc_utils.winreg.QueryInfoKey(class_key)[0]):
+                    subkey_name = icc_utils.winreg.EnumKey(class_key, i)
                     if subkey_name.isdigit() and len(subkey_name) == 4:
                         return subkey_name
         except:
@@ -344,7 +347,7 @@ class MonitorConfigWindow(QMainWindow):
         # 加载显示器配置
         try:
             
-            monitors = analyze()
+            monitors = icc_utils.analyze()
             
             if not monitors:
                 self.show_error("无法获取显示器配置信息")
@@ -405,13 +408,13 @@ class MonitorConfigWindow(QMainWindow):
         获取显示器硬件ID
         """
         try:
-            from windows_usr_sys_icc_reg import HKLM, winreg
+            
             
             monitor_guid = icc_utils.MONITOR_CLASS_GUID
             class_path = rf"SYSTEM\CurrentControlSet\Control\Class\{monitor_guid}\{instance_id}"
             
-            with winreg.OpenKey(HKLM, class_path) as device_key:
-                hardware_id = winreg.QueryValueEx(device_key, "HardwareID")[0]
+            with icc_utils.winreg.OpenKey(icc_utils.HKLM, class_path) as device_key:
+                hardware_id = icc_utils.winreg.QueryValueEx(device_key, "HardwareID")[0]
                 return hardware_id[0] if hardware_id else "未知"
         except:
             return "未知"
@@ -421,13 +424,13 @@ class MonitorConfigWindow(QMainWindow):
         获取自动颜色管理(ACM)状态
         """
         try:
-            from windows_usr_sys_icc_reg import HKLM, winreg
+            
             
             monitor_guid = icc_utils.MONITOR_CLASS_GUID
             class_path = rf"SYSTEM\CurrentControlSet\Control\Class\{monitor_guid}\{instance_id}\ColorManagement"
             
-            with winreg.OpenKey(HKLM, class_path) as cm_key:
-                acm_enabled = winreg.QueryValueEx(cm_key, "ColorManagementEnabled")[0]
+            with icc_utils.winreg.OpenKey(icc_utils.HKLM, class_path) as cm_key:
+                acm_enabled = icc_utils.winreg.QueryValueEx(cm_key, "ColorManagementEnabled")[0]
                 return "✅ 已启用" if acm_enabled else "❌ 未配置"
         except:
             return "❌ 未配置"

@@ -1,0 +1,836 @@
+Total pages: 126
+
+============================================================
+Page 7
+============================================================
+ICC.1:2022 
+© ICC 2022 – All rights reserved 
+ 
+vii 
+ 
+Key 
+T 
+colour management transform 
+Figure 1 — Use of a reference colour space 
+While images can be encoded directly in PCSXYZ or PCSLAB, this will not generally be the case. A number of 
+colour encodings for open exchange have been standardized to meet a variety of needs. Depending on the use 
+case, different bit depths, image states, reference media and colour gamuts are needed. Devices also have 
+different characteristics resulting in different native encodings. Except for a few cases where default encodings 
+for key system devices are used for exchange (like the sRGB encoding), it is not practical or productive to 
+attempt to restrict system colour encoding support. 
+For reasons of precision, it is usually desirable to define the transformation between the colour data encoding 
+and the profile connection space (PCS) at a high precision. If the transformation between a colour data encoding 
+and the PCS is provided with an image file, it can be utilized when images are reproduced. In order that the 
+transformation between the colour data encoding and the PCS can be interpreted by all applications it is 
+important that it be defined in an open specification. The profile format defined in this document provides that 
+specification. 
+0.4 Rendering intents 
+In general, actual device colour gamuts will fail to match each other, and that of the perceptual intent reference 
+medium, to varying degrees. Because of this mismatch, and because of the needs of different applications, four 
+rendering intents (colour rendering styles) are defined in this document. Each one represents a different colour 
+reproduction objective. The colorimetric rendering intents operate directly on measured colorimetric values, with 
+correction for chromatic adaptation when the measured values were not obtained relative to the PCS adopted 
+
+
+============================================================
+Page 8
+============================================================
+ICC.1:2022 
+viii  
+© ICC 2022 – All rights reserved 
+white chromaticity. The other rendering intents (perceptual and saturation) operate on colorimetric values which 
+are adjusted in an as-needed fashion to account for any differences between devices, media, and viewing 
+conditions. 
+Two colorimetric rendering intents are specified in this document, though only one is included fully constructed 
+in the profile. The included media relative colorimetric intent is based on media-relative colorimetry, which is 
+normalized relative to the media white for reflecting, transmitting, and self-luminous media, or, in the case of 
+colour encodings and capture, to the colour encoding values that correspond to the highest perceived brightness. 
+Thus the media white will have the values of 100, 0, 0 in PCSLAB. This ensures that highlight clipping will not 
+occur when the media-relative colorimetric intent is used. The use of media-relative colorimetry enables colour 
+reproductions to be defined which maintain highlight detail, while keeping the medium ‘white’, even when the 
+original and reproduction media differ in colour. However, this rendering intent introduces some change in all 
+colours in the reproduction when the media whites of the source and destination do not match. 
+The PCS adopted white is defined to be the radiance of a perfect reflecting diffuser illuminated by a source with 
+a spectral power distribution matching that of CIE Illuminant D50. ICC profiles contain the values of the media 
+white, adapted to be relative to the chromaticity of the PCS adopted white. For the ICC-absolute colorimetric 
+rendering intent, all of the colorimetric values are re-calculated to be relative to the tristimulus values of the PCS 
+adopted white. When source and destination viewing conditions are identical and an exact colour match is 
+required for all within-gamut colours (including the source medium colour), it is recommended that the ICC-
+absolute colorimetric rendering intent is used. This rendering intent can also be useful in other situations. 
+The colour rendering of the perceptual and saturation rendering intents is vendor specific. The former, which is 
+useful for general reproduction of pictorial images, typically includes tone scale adjustments to map the dynamic 
+range of one medium to that of another, and gamut reshaping and mapping to deal with gamut mismatches. 
+The latter has historically been useful for images which contain objects such as charts or diagrams, and usually 
+involves compromises such as trading off preservation of hue in order to preserve the vividness of pure colours. 
+As the saturation rendering intent is neither required to contain colorimetric characterization information or to 
+use the perceptual intent reference medium, it is the only option, in proprietary systems, for providing colour 
+rendering and re-rendering transforms to and from custom reference media represented in the PCS. For broader 
+interoperability when using the saturation rendering intent, the perceptual reference medium can be used, and 
+its use indicated. 
+For perceptual transforms it is necessary, in order to optimize colour rendering, to provide a realistic target for 
+the colour rendering. For this reason, a reference medium and reference viewing condition have been defined 
+which apply only to the perceptual rendering. The reference medium is defined as a hypothetical reflection print 
+on a substrate with a white having a neutral reflectance of 89 %, and a density range of 2,459 3. The reference 
+viewing condition is the P2 condition specified in ISO 3664, i.e. D50 at 500 lx for viewing reflecting media. A 
+neutral surround of 20 % reflectance is assumed. The colour gamut of the reference medium is qualitatively 
+specified as that of a reflection print, and whatever colour gamut is used in the PCS is required to be consistent 
+with the specified dynamic range of the perceptual reference medium. It is recommended that the reference 
+gamut specified in ISO 12640-3 be used as a more explicit target gamut for improved interoperability. It is 
+recommended that profile creators consider this gamut to be the target for perceptual intent colour rendering 
+and re-rendering to the PCS. Likewise, the perceptual intent colour re-rendering from the PCS needs to assume 
+this gamut as the starting gamut for colour re-rendering to the destination medium. However, even when the 
+use of this gamut is indicated, perceptual intent transforms need to be designed to produce the best visual 
+results, and need not conform exactly to this gamut in the PCS. 
+The choice of a reference medium with a realistic black point for the perceptual intent provides a well-defined 
+aim when colour rendering or re-rendering are required. Inputs with a dynamic range greater than a reflection 
+print (e.g. a slide film image, or the colorimetry of high-range scenes) can have their highlights and shadows 
+smoothly compressed to the range of the reference medium in such a way that these regions can be expanded 
+again without undue loss of detail on output to wide-range media. Likewise, images from original media with 
+limited dynamic range can be colour re-rendered to the expanded dynamic range of the reference medium, in 
+order to produce better quality in subsequent reproductions. Bi-directional transform pairs (e.g. data-to-PCS 
+and PCS-to-data for each rendering intent) in the profiles can be used to undo prior PCS-to-data colour re-
+rendering so that a differently optimized reproduction can be produced for a different reproduction medium. 
+Profiles generally offer different transformations for different rendering intents. When the rendering intent is 
+selected the corresponding transformation is selected by the colour management system. The choice of 
+rendering intent is highly dependent upon the intended use. In general, the perceptual rendering intent is most 
+
+
+============================================================
+Page 9
+============================================================
+ICC.1:2022 
+© ICC 2022 – All rights reserved 
+ 
+ix 
+applicable for the colour re-rendering of natural images, to make pleasing and aesthetically similar, but not 
+exactly matching, reproductions on different media. The ICC-absolute colorimetric rendering intent is most 
+appropriate for a proofing environment, where the colour reproduction obtained on one device is simulated on 
+another. The media-relative colorimetric rendering intent is appropriate when mapping of the source medium 
+white to the destination medium white is desired, but a full colour re-rendering is not. 
+For those requiring further information, an extended discussion of many of the issues described above is 
+provided in Annex D. 
+0.5 Colour profiles 
+Colour profiles provide colour management systems with the information necessary to convert colour data 
+between different colour encodings, including device encodings. This document divides colour devices into three 
+broad classifications, i.e. input devices, display devices and output devices. For each device class, a series of 
+base algorithmic models are described which perform the transformation between colour encodings. Figures 2 
+and 3 show examples of these models, which provide different trade-offs in memory footprint, colour quality and 
+performance results. The matrix tone reproduction curve (TRC) model is explained in detail in 8.3.3 and 8.4.3, 
+the lutAToBType and lutBToAType in 10.10 and 10.11, and the multiProcessElementsType in 10.14. The 
+necessary parameter data to implement these models is described in the appropriate tag type descriptions in 
+Clause 10. This required data provides the information for the colour management framework default colour 
+management module (CMM) to transform colour information between colour encodings. A representative 
+architecture using these components is illustrated in Figure 4. 
+NOTE 
+Only the models shown in Figures 2d), 2e), 2f), 3d), 3e) and 3f) can be used if the device space has more than 
+three components/colours. 
+ 
+a) Using a matrix/TRC model 
+ 
+b) Using a lutBToAType model 
+ 
+c) Using a lutBToAType model 
+
+
+============================================================
+Page 10
+============================================================
+ICC.1:2022 
+x 
+ 
+© ICC 2022 – All rights reserved 
+ 
+d) Using a lutBToAType model 
+ 
+e) Using a lutBToAType model 
+ 
+f) Using a multiProcessElementsType tag 
+Figure 2 — Examples of different ways of converting a colour from PCS to device space 
+ 
+ 
+a) Using a matrix/TRC model 
+ 
+b) Using a lutAToBType model 
+
+
+============================================================
+Page 43
+============================================================
+ICC.1:2022 
+© ICC 2022 – All rights reserved 
+29 
+8.5.3 Monochrome Output profiles 
+In addition to the tags listed in 8.2 a monochrome Output profile shall contain the following tag: 
+ grayTRCTag (see 9.2.29). 
+The AToB0Tag (see 9.2.1), AToB1Tag (see 9.2.2), AToB2Tag (see 9.2.3), BToA0Tag (see 9.2.6), BToA1Tag 
+(see 9.2.7), and BToA2Tag (see 9.2.8) may also be included in a monochrome Output profile. If these are 
+present, their usage shall be as defined in Table 25 (see 9.1). 
+The computational model supported by the grayTRCTag shall be that defined in F.2. 
+8.6 DeviceLink profile 
+A DeviceLink profile shall contain the following tags: 
+ profileDescriptionTag (see 9.2.41); 
+ copyrightTag (see 9.2.21);  
+ profileSequenceDescTag (see 9.2.42); 
+ AToB0Tag (see 9.2.1); 
+ colorantTableTag (see 9.2.18) which is required only if the data colour space field is xCLR, where x is 
+hexadecimal 2 to F (see 7.2.6); 
+ colorantTableOutTag (see 9.2.19), required only if the PCS field is xCLR, where x is hexadecimal 2 to F 
+(see 7.2.6) 
+This profile contains a pre-evaluated transform that cannot be undone, which represents a one-way link or 
+connection between devices. It does not represent any device model nor can it be embedded into images. 
+The single AToB0Tag may contain data for any one of the four possible rendering intents. The rendering intent 
+used is indicated in the header of the profile. 
+The data colour space field (see 7.2.6) in the DeviceLink profile will be the same as the data colour space field 
+of the first profile in the sequence used to construct the device link. The PCS field (see 7.2.7) will be the same 
+as the data colour space field of the last profile in the sequence.  
+If the data colour space field is set to xCLR, where x is hexadecimal 2 to F, the colorantTableTag (9.2.18) is a 
+required tag to specify the names and PCSLAB values of the input colorants (Table 19), as these names are 
+not otherwise implicit in the choice of the colour space. These colorants represent the input values of the profile.  
+Correspondingly, if the PCS field is set to xCLR where x is hexadecimal 2 to F, the colorantTableOutTag (9.2.19) 
+is required, and represents the output colorants (Table 19). In this case the colorantTableOutTag uses PCSLAB 
+values.  
+A DeviceLink profile may contain a DToB0Tag (see 9.2.24). 
+NOTE 
+The colorantOrderType tag ‘clro’ specifies the laydown order of the output colorants.  
+ 
+8.7 ColorSpace profile 
+In addition to the tags listed in 8.2, a ColorSpace profile shall contain the following tags: 
+ BToA0Tag (see 9.2.6); 
+ AToB0Tag (see 9.2.1). 
+
+
+============================================================
+Page 44
+============================================================
+ICC.1:2022 
+30 
+© ICC 2022 – All rights reserved 
+This profile provides the relevant information to perform a transformation between colour encodings and the 
+PCS. This type of profile is based on modelling rather than device measurement or characterization data. 
+ColorSpace profiles may be embedded in images. 
+For ColorSpace profiles, the device profile dependent fields are set to zero if irrelevant. 
+The AToB1Tag (see 9.2.2), AToB2Tag (see 9.2.3), BToA1Tag (see 9.2.7), BToA2Tag (see 9.2.8) DToB0Tag 
+(see 9.2.24), DToB1Tag (see 9.2.25), DToB2Tag (see 9.2.26), DToB3Tag (see 9.2.27), BToD0Tag (see 9.2.9), 
+BToD1Tag (see 9.2.10), BToD2Tag (see 9.2.11), and BToD3Tag (see 9.2.12) may also be included in a 
+ColorSpace profile. If these are present, their usage shall be as defined in Table 25 (see 9.1).  
+A gamutTag (see 9.2.28) may be included. The usage of this tag is identical as in Output profiles. 
+8.8 Abstract profile 
+In addition to the tags listed in 8.2, an Abstract profile shall contain the following tag: 
+ AToB0Tag (see 9.2.1).  
+This profile represents abstract transforms and does not represent any device model. Colour transformations 
+using Abstract profiles are performed from PCS to PCS. Abstract profiles cannot be embedded in images. 
+An Abstract profile may contain a DToB0Tag (see 9.2.24). 
+8.9 NamedColor profile 
+In addition to the tags listed in 8.2, a NamedColor profile shall contain the following tag: 
+ namedColor2Tag (see 9.2.35). 
+NamedColor profiles can be thought of as sibling profiles to device profiles. For a given device there would be 
+one or more device profiles to handle process colour conversions and one or more named colour profiles to 
+handle named colours.  
+The namedColor2Tag provides a PCS and optional device representation for each named colour in a list of 
+named colours. NamedColor profiles are device-specific in that their data is shaped for a particular device. 
+There might be multiple NamedColor profiles to account for different consumables or multiple named colour 
+vendors. The PCS representation is provided to support general colour management functionality. It is very 
+useful for display and emulation of the named colours. 
+When using a NamedColor profile with the device for which it is intended, the device representation of the colour 
+specifies the exact device coordinates for each named colour, if available. The PCS representation in 
+conjunction with the device’s Output profile can provide an approximation of these exact coordinates. The 
+exactness of this approximation is a function of the accuracy of the Output profile and the colour management 
+system performing the transformations. 
+The combination of the PCS and device representations provides for flexibility with respect to accuracy and 
+portability. 
+8.10 Precedence order of tag usage 
+8.10.1 General 
+There are several methods of colour transformation that can function within a single CMM. If data for more than 
+one method are included in the same profile, the following selection algorithm shall be used by the software 
+implementation. 
+
+
+============================================================
+Page 45
+============================================================
+ICC.1:2022 
+© ICC 2022 – All rights reserved 
+31 
+8.10.2 Input, display, output, or colour space profile types 
+For input, display, output, or colour space profile types, the precedence order of the tag usage for a designated 
+rendering intent shall be the following. 
+a) 
+Use the BToD0Tag, BToD1Tag, BToD2Tag, BToD3Tag, DToB0Tag, DToB1Tag, DToB2Tag, or 
+DToB3Tag designated for the rendering intent if the tag is present, except where this tag is not needed or 
+supported by the CMM (if a particular processing element within the tag is not supported the tag is not 
+supported). 
+b) 
+Use the BToA0Tag, BToA1Tag, BToA2Tag, AToB0Tag, AToB1Tag, or AToB2Tag designated for the 
+rendering intent if present, when the tag in a) is not used. 
+c) 
+Use the BToA0Tag or AToB0Tag if present, when the tags in a) and b) are not used. 
+d) 
+Use 
+TRCs 
+(redTRCTag, 
+greenTRCTag, 
+blueTRCTag, 
+or 
+grayTRCTag) 
+and 
+colorants 
+(redMatrixColumnTag, greenMatrixColumnTag, blueMatrixColumnTag) when tags in a), b), and c) are not 
+used. 
+See Table 25. 
+8.10.3 DeviceLink or Abstract profile types 
+For DeviceLink or Abstract profile types, the precedence order of the tag usage shall be: 
+a) 
+Use the DToB0Tag if present, except where this tag is not needed or supported by the CMM (if a particular 
+processing element within the tag is not supported the tag is not supported). 
+b) 
+Use the AToB0Tag if the DToB0Tag is not used. 
+See Table 25. 
+9 
+Tag definitions 
+9.1 General 
+The public tags currently defined by the ICC are listed in 9.2 in alphabetical order. All tags, including private 
+tags, have as their first four bytes a tag signature to identify to profile readers what kind of data is contained 
+within a tag. Each entry in 9.2 contains the tag signatures that shall be used for that tag, the permitted tag types 
+for each tag (see Clause 10), and a brief description of the purpose of each tag. A short form tabular listing of 
+all publicly available tags is given in Table G.13. 
+These individual tags are used to create all possible profiles. The tag signature indicates only the type of data 
+and does not imply anything about the use or purpose for which the data is intended. Clause 8 specifies the 
+tags that shall be included for each type of profile. Any other tag in 9.2 may be used as an optional tag as long 
+as they are not specifically excluded in the definition of a profile class. 
+The interpretation of some tags is context dependent. This dependency is described in Table 25 which provides 
+a useful summary of the rendering intent associated with each of the main profile classes and models. The term 
+“undefined” means that the use of the tag in that situation is not specified by the ICC. The ICC recommends 
+that such tags not be included in profiles. If the tag is present, its use is implementation dependent. In general, 
+the BToAxTags represent the inverse operation of the AToBxTags. Note that the AToB1Tag and BToA1Tag are 
+used to provide both of the colorimetric intents. 
+Table 25 — Profile type/profile tag and defined rendering intents 
+Profile class 
+AToB0Tag 
+AToB1Tag 
+AToB2Tag 
+TRC/matrix 
+& GrayTRC 
+BToA0Tag 
+BToA1Tag 
+BToA2Tag 
+
+
+============================================================
+Page 46
+============================================================
+ICC.1:2022 
+32 
+© ICC 2022 – All rights reserved 
+Input 
+Device to 
+PCS: 
+perceptual 
+Device to 
+PCS: 
+colorimetric 
+Device to 
+PCS: 
+saturation 
+Colorimetric  
+PCS to 
+device: 
+perceptual 
+PCS to 
+device: 
+colorimetric 
+PCS to 
+device: 
+saturation 
+Display 
+Device to 
+PCS: 
+perceptual  
+Device to 
+PCS: 
+colorimetric  
+Device to 
+PCS: 
+saturation  
+Colorimetric  
+PCS to 
+device: 
+perceptual 
+PCS to 
+device: 
+colorimetric 
+PCS to 
+device: 
+saturation 
+Output 
+Device to 
+PCS: 
+perceptual 
+Device to 
+PCS: 
+colorimetric 
+Device to 
+PCS: 
+saturation 
+Undefined 
+PCS to 
+device: 
+perceptual 
+PCS to 
+device: 
+colorimetric 
+PCS to 
+device: 
+saturation 
+ColorSpace 
+Colour 
+encoding to 
+PCS: 
+perceptual  
+Colour 
+encoding to 
+PCS: 
+colorimetric 
+Colour 
+encoding to 
+PCS: 
+saturation 
+Undefined 
+PCS to 
+colour 
+encoding: 
+perceptual  
+PCS to 
+colour 
+encoding: 
+colorimetric  
+PCS to 
+colour 
+encoding: 
+saturation 
+Abstract 
+PCS to PCS 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+DeviceLink 
+Device1 to 
+device2 
+rendering 
+intent defined 
+according to 
+Table 23 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+NamedColor 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+Undefined 
+ 
+The AToBxTags and BToAxTags represent a model that can include a multi-dimensional lookup table. These 
+models are described in detail in 10.8, 10.9, 10.10 and 10.11 
+The DToBxTags and BToDxTags represent colour transforms that operate on a range of values encoded by 
+32-bit IEEE 754 floating-point numbers. The processing model is described in detail in 10.14. These tags are 
+optional for all profile classes. 
+The “D” space represents a 32-bit IEEE 754 floating-point-encoded Device Space. In this space, negative as 
+well as positive values (including values greater than 1,0) are allowed when such values are supported by the 
+device. 
+The “B” space represents the PCS, identical to the “B” space in the AToBxTags and BToAxTags. The encoding 
+range of the “B” space in the DToBxTags and BToDxTags is defined in 6.3.4, as is the case with the “B” space 
+in AToBxTags and BToAxTags. (See 6.3.4.) 
+The DToB3Tag and BToD3Tag allow the ability to directly encode the absolute rendering intent in a profile. The 
+PCS for DToB3 and BToD3 represents ICC-absolute colorimetry with the values encoded as float32Number. 
+The mediaWhitePoint tag is NOT used in the calculation of ICC-absolute colorimetry from the data in the 
+DToB3Tag and BToD3Tag. 
+9.2 Tag listing 
+9.2.1 AToB0Tag 
+Tag signature: ‘A2B0’ (41324230h) 
+Permitted tag types: lut8Type or lut16Type or lutAToBType 
+This tag defines a colour transform from Device, Colour Encoding or PCS, to PCS, or a colour transform from 
+Device 1 to Device 2, using lookup table tag element structures. For most profile classes it defines the transform 
+to achieve perceptual rendering (see Table 25). The processing mechanisms are described in lut8Type or 
+lut16Type or lutAToBType (see 10.8, 10.9 and 10.10). 
+9.2.2 AToB1Tag 
+Tag signature: ‘A2B1’ (41324231h) 
+
+
+============================================================
+Page 47
+============================================================
+ICC.1:2022 
+© ICC 2022 – All rights reserved 
+33 
+Permitted tag types: lut8Type or lut16Type or lutAToBType 
+This tag describes the colour transform from Device or Colour Encoding to PCS using lookup table tag element 
+structures. For most profile classes, it defines the transform to achieve colorimetric rendering (see Table 25). 
+The processing mechanisms are described in lut8Type or lut16Type or lutAToBType (see 10.8, 10.9 and 10.10).  
+9.2.3 AToB2Tag 
+Tag signature: ‘A2B2’ (41324232h) 
+Permitted tag types: lut8Type or lut16Type or lutAToBType 
+This tag describes the colour transform from Device or Colour Encoding to PCS using lookup table tag element 
+structures. For most profile classes it defines the transform to achieve saturation rendering (see Table 25). The 
+processing mechanisms are described in lut8Type or lut16Type or lutAToBType (see 10.8, 10.9 and 10.10). 
+9.2.4 blueMatrixColumnTag 
+Tag signature: ‘bXYZ’ (6258595Ah) 
+Permitted tag type: XYZType 
+This tag contains the third column in the matrix used in matrix/TRC transforms. 
+9.2.5 blueTRCTag 
+Tag signature: ‘bTRC’ (62545243h) 
+Permitted tag types: curveType or parametricCurveType 
+This tag contains the blue channel tone reproduction curve. The first element represents no colorant (white) or 
+phosphor (black) and the last element represents 100 % colorant (blue) or 100 % phosphor (blue). 
+9.2.6 BToA0Tag 
+Tag signature: ‘B2A0’ (42324130h) 
+Permitted tag types: lut8Type or lut16Type or lutBToAType 
+This tag defines a colour transform from PCS to Device or Colour Encoding using the lookup table tag element 
+structures. For most profile classes, it defines the transform to achieve perceptual rendering (see Table 25). 
+The processing mechanisms are described in lut8Type or lut16Type or lutBToAType (see 10.8, 10.9 and 10.11). 
+9.2.7 BToA1Tag 
+Tag signature: ‘B2A1’ (42324131h) 
+Permitted tag types: lut8Type or lut16Type or lutBToAType 
+This tag defines a colour transform from PCS to Device or Colour Encoding using the lookup table tag element 
+structures. For most profile classes it defines the transform to achieve colorimetric rendering (see Table 25). 
+The processing mechanisms are described in lut8Type or lut16Type or lutBToAType (see 10.8, 10.9 and 10.11). 
+9.2.8 BToA2Tag 
+Tag signature: ‘B2A2’ (42324132h) 
+Permitted tag types: lut8Type or lut16Type or lutBToAType 
+
+
+============================================================
+Page 48
+============================================================
+ICC.1:2022 
+34 
+© ICC 2022 – All rights reserved 
+This tag defines a colour transform from PCS to Device or Colour Encoding using the lookup table tag element 
+structures. For most profile classes it defines the transform to achieve saturation rendering (see Table 25). The 
+processing mechanisms are described in lut8Type or lut16Type or lutBToAType (see 10.8, 10.9 and 10.11). 
+9.2.9 BToD0Tag 
+Tag signature ‘B2D0’ (42324430h) 
+Allowed tag types: multiProcessElementsType 
+This tag defines a colour transform from PCS to Device. It supports float32Number-encoded input range, output 
+range and transform, and provides a means to override the BToA0Tag. As with the BToA0Tag, it defines a 
+transform 
+to 
+achieve 
+a 
+perceptual 
+rendering. 
+The 
+processing 
+mechanism 
+is 
+described 
+in 
+multiProcessElementsType (see 10.14). 
+9.2.10 BToD1Tag 
+Tag signature ‘B2D1’ (42324431h) 
+Allowed tag types: multiProcessElementsType 
+This tag defines a colour transform from PCS to Device. It supports float32Number-encoded input range, output 
+range and transform, and provides a means to override the BToA1Tag. As with the BToA1Tag, it defines a 
+transform to achieve a media-relative colorimetric rendering. The processing mechanism is described in 
+multiProcessElementsType (see 10.14). 
+9.2.11 BToD2Tag 
+Tag signature ‘B2D2’ (42324432h) 
+Allowed tag types: multiProcessElementsType 
+This tag defines a colour transform from PCS to Device. It supports float32Number-encoded input range, output 
+range and transform, and provides a means to override the BToA2Tag. As with the BToA2Tag, it defines a 
+transform 
+to 
+achieve 
+a 
+saturation 
+rendering. 
+The 
+processing 
+mechanism 
+is 
+described 
+in 
+multiProcessElementsType (see 10.14). 
+9.2.12 BToD3Tag 
+Tag signature ‘B2D3’ (42324433h) 
+Allowed tag types: multiProcessElementsType 
+This tag defines a colour transform from PCS to Device. It supports float32Number-encoded input range, output 
+range and transform, and provides a means to override the BToA1Tag and associated ICC-absolute colorimetric 
+rendering intent processing. As with the BToA1Tag and associated ICC-absolute colorimetric rendering intent 
+processing, it defines a transform to achieve an ICC-absolute colorimetric rendering. The processing 
+mechanism is described in multiProcessElementsType (see 10.14). 
+9.2.13 calibrationDateTimeTag 
+Tag signature: ‘calt’ (63616C74h) 
+Permitted tag type: dateTimeType 
+This tag contains the profile calibration date and time. This allows applications and utilities to verify if this profile 
+matches a vendor’s profile and how recently calibration has been performed. 
+
+
+============================================================
+Page 49
+============================================================
+ICC.1:2022 
+© ICC 2022 – All rights reserved 
+35 
+9.2.14 charTargetTag 
+Tag signature: ‘targ’ (74617267h) 
+Permitted tag type: textType 
+This tag contains the name of the registered characterization data set, or it contains the measurement data for 
+a characterization target. This tag is provided so that distributed utilities can identify the underlying 
+characterization data, create transforms “on the fly” or check the current performance against the original device 
+performance. 
+The first seven characters of the text shall identify the nature of the characterization data. 
+If the first seven characters are “ICCHDAT”, then the remainder of the text shall be a single space followed by 
+the Reference Name of a characterization data set in the Characterization Data Registry maintained by ICC, 
+and terminated with a NULL byte (00h). The Reference Name in the text shall match exactly (including case) 
+the Reference Name in the registry which may be found on the ICC web site (www.color.org). 
+If the first seven characters match one of the identifiers defined in an ANSI or ISO standard, then the tag embeds 
+the exact data file format defined in that standard. Each of these file formats contains an identifying character 
+string as the first seven characters of the format, allowing an external parser to determine which data file format 
+is being used. This provides the facilities to include a wide range of targets using a variety of measurement 
+specifications in a standard manner. 
+9.2.15 chromaticAdaptationTag 
+Tag signature: 'chad' (63686164h) 
+Permitted tag type: s15Fixed16ArrayType 
+This tag contains a matrix, which shall be invertible, and which converts an nCIEXYZ colour, measured using 
+the actual illumination conditions and relative to the actual adopted white, to an nCIEXYZ colour relative to the 
+PCS adopted white, with complete adaptation from the actual adopted white chromaticity to the PCS adopted 
+white chromaticity. 
+The tag reflects a survey of the currently used methods of conversion, all of which can be formulated as a matrix 
+transformation. The Bradford transform (see Annex E) is recommended for ICC profiles.  
+Such a 3  3 chromatic adaptation matrix is organized as a 9-element array of s15Fixed16Number numbers 
+(s15Fixed16ArrayType tag). Similarly as in the other occurrences of a 3  3 matrix in the ICC tags, the dimension 
+corresponding to the matrix rows varies least rapidly while the one corresponding to the matrix columns varies 
+most rapidly. 
+array = 
+0
+1
+2
+3
+4
+5
+6
+7
+8
+a
+a
+a
+a
+a
+a
+a
+a
+a
+
+
+
+ 
+(10) 
+൥
+ܺ௉஼ௌ
+ܻ௉஼ௌ
+ܼ௉஼ௌ
+൩ൌ൥
+ܽ଴
+ܽଵ
+ܽଶ
+ܽଷ
+ܽସ
+ܽହ
+ܽ଺
+ܽ଻
+଼ܽ
+൩൥
+ܺௌோ஼
+ܻௌோ஼
+ܼௌோ஼
+൩ 
+(11) 
+where (XYZ)SRC represents the measured nCIEXYZ value in the actual device viewing condition and (XYZ)PCS 
+represents the chromatically adapted nCIEXYZ value. 
+The chromatic adaptation matrix is a combination of three separate conversions as defined in Annex E. 
+9.2.16 chromaticityTag 
+Tag signature: ‘chrm’ (6368726Dh) 
+Permitted tag type: chromaticityType 
+
+
+============================================================
+Page 50
+============================================================
+ICC.1:2022 
+36 
+© ICC 2022 – All rights reserved 
+This tag contains the type and the data of the phosphor/colorant chromaticity set used. 
+9.2.17 cicpTag 
+Tag signature: ‘cicp’ (63696370h) 
+Permitted tag type: cicpType 
+This tag defines Coding-Independent Code Points (CICP) for video signal type identification. 
+The colour encoding specified by the CICP tag content shall be equivalent to the data colour space encoding 
+represented by this ICC profile. 
+NOTE The ICC colour transform cannot match every possible rendering of a CICP colour encoding. 
+This tag may be present when the data colour space in the profile header is RGB, YCbCr, or XYZ, and the 
+profile class in the profile header is Input or Display. The tag shall not be present for other data colour spaces 
+or profile classes indicated in the profile header. 
+9.2.18 colorantOrderTag 
+Tag signature: ’clro’ (636C726Fh) 
+Permitted tag type: colorantOrderType 
+This tag specifies the laydown order of colorants. 
+9.2.19 colorantTableTag 
+Tag signature: ’clrt’ (636C7274h) 
+Permitted tag type: colorantTableType 
+This tag identifies the colorants used in the profile by a unique name and set of PCSXYZ or PCSLAB values. 
+When used in DeviceLink profiles only the PCSLAB values shall be permitted. 
+9.2.20 colorantTableOutTag 
+Tag signature: ‘clot’ (636C6F74h)  
+Permitted tag type: colorantTableType  
+This tag identifies the colorants used in the profile by a unique name and set of PCSLAB values. This tag is 
+used for DeviceLink profiles only. 
+9.2.21 colorimetricIntentImageStateTag 
+Tag signature: ‘ciis’ (63696973h) 
+Permitted tag type: signatureType 
+This tag indicates the image state of PCS colorimetry produced using the colorimetric intent transforms. If 
+present, the colorimetricIntentImageStateTag shall specify one of the ICC-defined image states shown in 
+Table 26 and described herein. Other image state specifications are reserved for future ICC use. 
+NOTE 1 
+When the state of the image colorimetry represented in the PCS is different from that of the image data in the 
+file, the colorimetric intent image state includes the word “estimates”. This will be the case when transformation of the image 
+file data to colorimetry is not fully deterministic. 
+EXAMPLE 
+If the spectral sensitivities of a digital camera sensor (or photographic film) are not a linear transform of the 
+CIE XYZ colour matching functions, there will not be a single “correct” transform to focal plane colorimetry. 
+
+
+============================================================
+Page 51
+============================================================
+ICC.1:2022 
+© ICC 2022 – All rights reserved 
+37 
+Table 26 — colorimetricIntentImageStateTag signatures 
+Colorimetric intent image state 
+Signature 
+Hex encoding 
+Scene colorimetry estimates 
+'scoe' 
+73636F65h 
+Scene appearance estimates 
+'sape' 
+73617065h 
+Focal plane colorimetry estimates 
+'fpce' 
+66706365h 
+Reflection hardcopy original colorimetry 
+‘rhoc’ 
+72686F63h 
+Reflection print output colorimetry 
+‘rpoc’ 
+72706F63h 
+ 
+The tag value 'scoe' (scene colorimetry estimates) shall indicate that colorimetry in the PCS represents 
+estimates of the colorimetry of the scene, as viewed from the capture point, chromatically adapted from the 
+scene adopted white chromaticity to the PCS D50 adopted white chromaticity. With the media-relative 
+colorimetric intent, the colorimetry is relative to the scene encoding maximum white (after chromatic adaptation). 
+With the ICC-absolute colorimetric intent, the colorimetry is relative to the scene adopted white (after chromatic 
+adaptation). The scene colorimetry estimates can result from a real scene, a synthetically generated scene, an 
+edited scene, or some combination of these, but shall be interpreted as actual scene colorimetry for subsequent 
+processing. When this image state is specified, the actual scene viewing conditions, including the adopted white, 
+shall be specified in the viewingConditionsTag. 
+For scene colorimetry estimates, the mediaWhitePointTag is populated with the XYZ tristimulus values of the 
+scene encoding maximum white, normalized to be relative to the scene adopted white (perfect diffuser), and 
+then converted to the corresponding tristimulus values for the D50 PCS white point using the 
+chromaticAdaptationTag matrix (if required). The scene adopted white Y value is normalized to 1,0; the 
+mediaWhitePointTag Y value is relative to the scene adopted white Y value and can be larger than 1,0. 
+NOTE 2 
+The un-normalized adopted white values are stored in the illuminant field in the ViewingConditionsTag. 
+NOTE 3 
+Since the media white point Y value can be larger than 1,0, brighter than diffuse white colours (e.g. specular 
+highlights) can be represented. 
+The tag value 'sape' (scene appearance estimates) shall indicate that colorimetry in the PCS represents 
+estimates of the appearance of the scene, as viewed from the capture point, fully adapted to the ISO 3664 P2 
+viewing conditions. With the media relative colorimetric intent, the corresponding colorimetry is relative to the 
+scene encoding maximum white (after adaptation). With the ICC-absolute colorimetric intent, the corresponding 
+colorimetry is relative to the scene adopted white (after adaptation). The scene appearance estimates may 
+result from a real scene, a synthetically generated scene, an edited scene, or some combination of these, but 
+shall be interpreted as scene appearance estimates for an actual scene in subsequent processing. When this 
+image state is specified, the ISO 3664 P2 viewing conditions shall be specified in the viewing conditions tag. 
+For scene appearance estimates, the mediaWhitePointTag is populated with the XYZ tristimulus values of the 
+scene encoding maximum white, normalized to be relative to the scene adopted white (perfect diffuser), and 
+then converted to the corresponding tristimulus values for the D50 PCS white point using the 
+chromaticAdaptationTag matrix (if required). The scene adopted white Y value is normalized to 1,0; the 
+mediaWhitePointTag Y value is relative to the scene adopted white Y value and can be larger than 1,0. 
+NOTE 4 
+Since the media white point Y value can be larger than 1,0, brighter than diffuse white colours can be represented 
+(e.g. specular highlights). 
+The tag value 'fpce' (focal plane colorimetry estimates) shall indicate that colorimetry in the PCS represents 
+estimates of the colorimetry of the light present at the focal plane of a camera (digital or film), chromatically 
+adapted from the focal plane adopted white chromaticity to the PCS D50 adopted white chromaticity. With the 
+media relative colorimetric intent, the colorimetry is relative to the focal-plane encoding maximum white (after 
+chromatic adaptation). With the ICC-absolute colorimetric intent, the colorimetry is relative to the focal plane 
+adopted white (after chromatic adaptation). The focal plane colorimetry may result from a real scene, a 
+synthetically generated scene, an edited scene, or some combination of these, but shall be interpreted as focal 
+plane colorimetry for subsequent processing. When this colorimetric intent image state is specified, the actual 
+focal plane viewing conditions, including the adopted white, shall be specified in the viewing conditions tag. 
+
+
+============================================================
+Page 52
+============================================================
+ICC.1:2022 
+38 
+© ICC 2022 – All rights reserved 
+For focal plane colorimetry estimates, the mediaWhitePointTag is populated with the XYZ tristimulus values of 
+the focal plane encoding maximum white, normalized to be relative to the focal plane adopted white (perfect 
+diffuser), and then converted to the corresponding tristimulus values for the D50 PCS white point using the 
+chromaticAdaptationTag matrix (if required). The focal plane adopted white Y value is normalized to 1,0; the 
+mediaWhitePointTag Y value is relative to the focal plane adopted white Y value and can be larger than 1,0. 
+NOTE 5 
+The effects of any optics in or attached to the camera are included in the focal plane colorimetry estimates; this 
+includes lens flare, filters, etc. 
+NOTE 6 
+The un-normalized adopted white values are stored in the illuminant field in the viewing conditions tag. 
+NOTE 7 
+Since the media white point Y value can be larger than 1,0, brighter than diffuse white colours can be represented 
+(e.g. specular highlights). 
+The tag value 'rhoc' (reflection hardcopy original colorimetry) shall indicate that colorimetry in the PCS 
+represents the colorimetry of a reflection hardcopy original that has been digitally scanned, and chromatically 
+adapted from the scanner adopted white chromaticity to the PCS D50 adopted white chromaticity. With the 
+media relative colorimetric intent, the colorimetry is normalized relative to the scan condition encoding maximum 
+white after chromatic adaptation to D50. With the ICC-absolute colorimetric intent, the colorimetry is relative to 
+the perfect reflecting diffuser after chromatic adaptation to D50. When this colorimetric intent image state is 
+specified, the scan illumination conditions, including the adopted white, shall be specified in the viewing 
+conditions tag and the chromatic adaptation shall be specified in the chromaticAdaptationTag. 
+NOTE 8 
+The un-normalized adopted white values are stored in the illuminant field in the viewing conditions tag. 
+The tag value 'rpoc' (reflection print output colorimetry) shall indicate that colorimetry in the PCS represents the 
+colorimetry of reflection print output, after chromatic adaptation from the print viewing condition adopted white 
+chromaticity to the PCS D50 adopted white chromaticity. With the media relative colorimetric intent, the 
+colorimetry is normalized relative to the print medium white point, measured under the actual print viewing 
+conditions. With the ICC-absolute colorimetric intent, the colorimetry is relative to the perfect reflecting diffuser 
+after chromatic adaptation to D50. When this colorimetric intent image state is specified, the print viewing 
+conditions, including the adopted white, shall be specified in the viewing conditions tag, and the chromatic 
+adaptation shall be specified in the chromaticAdaptationTag. 
+NOTE 9 
+The un-normalized adopted white values are stored in the illuminant field in the viewing conditions tag. 
+9.2.22 copyrightTag 
+Tag signature: ‘cprt’ (63707274h) 
+Permitted tag type: multiLocalizedUnicodeType 
+This tag contains the text copyright information for the profile. 
+9.2.23 deviceMfgDescTag 
+Tag signature: ‘dmnd’ (646D6E64h) 
+Permitted tag type: multiLocalizedUnicodeType 
+This tag describes the structure containing invariant and localizable versions of the device manufacturer for 
+display. The content of this structure is described in 10.13. 
+9.2.24 deviceModelDescTag 
+Tag signature: ‘dmdd’ (646D6464h) 
+Permitted tag type: multiLocalizedUnicodeType 
+This tag describes the structure containing invariant and localizable versions of the device model for display. 
+The content of this structure is described in 10.13. 
+
+

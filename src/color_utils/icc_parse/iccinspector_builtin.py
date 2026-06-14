@@ -118,8 +118,13 @@ if __name__ == '__main__':
     # css = image.info.get('icc_profile')
     # f = io.BytesIO(css)
     # prf = ImageCms.ImageCmsProfile(f)
-    prf=load_icc(r"D:\Note\CODE\HoverColor\src\icon\icon.png")
+    prf=load_icc(r"D:\material\DATA\photoimg\39-pacific-tele-IMG_20260321_134414.jpg")
     if prf :
-        save_icc(prf,warp_file(os.path.dirname(os.path.abspath(__file__)),"profiles/extracted.icc"))
-        show_icc(prf)
-        print(prf.profile.__dir__())
+        profile_description=prf.profile.profile_description
+        if profile_description:
+            save_icc(prf,warp_file(os.path.dirname(os.path.abspath(__file__)),f"profiles/extracted_{profile_description}"))
+        else:
+            save_icc(prf,warp_file(os.path.dirname(os.path.abspath(__file__)),f"profiles/extracted.icc"))
+        print("profile_description:",profile_description)
+        # show_icc(prf)
+        # print(prf.profile.__dir__())

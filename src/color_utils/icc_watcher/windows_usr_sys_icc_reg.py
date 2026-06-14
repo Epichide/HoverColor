@@ -577,7 +577,7 @@ def analyze() -> List[Dict]:
 # =============================
 def print_report(monitors: List[Dict]):
     print("="*40)
-    print("Windows 显示器颜色系统 分析报告（修正版）")
+    print("Windows 显示器颜色系统")
     print("="*40)
     
     for i, m in enumerate(monitors, 1):
@@ -608,25 +608,33 @@ def print_report(monitors: List[Dict]):
         # ACM自动配置 > 显示器用户配置1 > 显示器系统设置2 > Windows用户默认设置3 > Windows系统默认设置4 > 兜底默认值(sRGB)5
 
         # 最终生效默认值
-        print(f"\n  📌 【最终生效默认ICC】")
+        print(f"\n  ✅  【最终生效默认ICC】")
         print(f"    配置来源: {final.get('source', '未知')}")
         print(f"    SDR默认: {get_icc_friendly_name(final.get('sdr_default'))} | 路径: {final.get('sdr_default')}")
         print(f"    HDR默认: {get_icc_friendly_name(final.get('hdr_default'))} | 路径: {final.get('hdr_default')}")
 
-        # 全配置表明细
-        print(f"\n  📋 【显示器配置表明细】")
+        # Windows 颜色系统默认值（SDR和HDR共用）
+        win_profiles = m.get("windows_profiles", {})
+        user_win = win_profiles.get("user", {})
+        sys_win = win_profiles.get("system", {})
+
+        # =============================
+        # SDR 配置
+        # =============================
+        print(f"\n  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
+        print(f"  ┃ 🌐 SDR 配置明细                   ┃")
+        print(f"  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
+
+        # 📋 显示器配置表明细 - SDR
+        print(f"\n  📋 【显示器配置表明细 - SDR】")
         print(f"    👲  用户级配置（HKCU，仅当前用户生效）:")
         print(f"       启用用户自定义: {'✅ 是' if m['use_user_profile'] else '❌ 否'}")
-        # 是否生效
-        is_usr_effective = m['use_user_profile'] # or (m['acm_state'] == 1 and m['fingerprint'] in acm_map)
+        is_usr_effective = m['use_user_profile']
         is_usr_effective_mark = "" if is_usr_effective else "(未生效)"
         print(f"       用户SDR默认: {get_icc_friendly_name(user_cfg.get('sdr_default'))} {is_usr_effective_mark}")
-        print(f"       用户HDR默认: {get_icc_friendly_name(user_cfg.get('hdr_default'))} {is_usr_effective_mark}")
         print(f"    🖥️  系统级配置（HKLM，系统用户）:")
-
         is_sys_effective_mark = "(未生效)" if is_usr_effective else ""
         print(f"       系统SDR默认: {get_icc_friendly_name(system_cfg.get('sdr_default'))} {is_sys_effective_mark}")
-        print(f"       系统HDR默认: {get_icc_friendly_name(system_cfg.get('hdr_default'))} {is_sys_effective_mark}")
 
         # 用户SDR ICC列表
         print(f"\n     👲 【用户SDR ICC列表（来自 HKCU ICMProfile）】")
@@ -637,51 +645,80 @@ def print_report(monitors: List[Dict]):
         else:
             print(f"    无")
 
+        # 系统级SDR ICC列表
+        print(f"\n     �️  【系统SDR ICC列表（来自 HKLM ICMProfile）】")
+        if system_cfg.get('sdr_icc'):
+            for idx, (icc_path, source) in enumerate(system_cfg['sdr_icc'], 1):
+                default_mark = " (默认值)" if icc_path == system_cfg.get('sdr_default') else ""
+                print(f"    {idx:<2}. {get_icc_friendly_name(icc_path):<30} {source:<6} {icc_path} {default_mark} {get_exists_mark(icc_path)}")
+        else:
+            print(f"    无")
+
+        # 💾 系统配置缓存快照 - SDR
+        print(f"\n     💾 【系统配置缓存快照（仅展示，非配置源，会延迟）- SDR】")
+        if cache.get('sdr_snapshot'):
+            print(f"    SDR快照: {', '.join([get_icc_friendly_name(p) for p, _ in cache['sdr_snapshot']])}")
+        else:
+            print(f"    无")
+
+        # Windows配置表明细 - SDR
+        print(f"\n  📋 【Windows配置表明细 - SDR】")
+        print(f"    👲 Windows用户级默认（HKCU RegisteredProfiles）:")
+        if user_win:
+            for k, v in user_win.items():
+                print(f"       {k:<12} → {get_icc_friendly_name(v)} | {v} {get_exists_mark(v)}")
+        else:
+            print("       无")
+
+        print(f"\n    🖥️ Windows系统级默认（HKLM RegisteredProfiles）:")
+        if sys_win:
+            for k, v in sys_win.items():
+                print(f"       {k:<12} → {get_icc_friendly_name(v)} | {v} {get_exists_mark(v)}")
+        else:
+            print("       无")
+
+        # =============================
+        # HDR 配置
+        # =============================
+        print(f"\n\n  ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓")
+        print(f"  ┃ 🌈 HDR 配置明细                   ┃")
+        print(f"  ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛")
+
+        # 📋 显示器配置表明细 - HDR
+        print(f"\n  📋 【显示器配置表明细 - HDR】")
+        print(f"    👲  用户级配置（HKCU，仅当前用户生效）:")
+        print(f"       用户HDR默认: {get_icc_friendly_name(user_cfg.get('hdr_default'))} {is_usr_effective_mark}")
+        print(f"    🖥️  系统级配置（HKLM，系统用户）:")
+        print(f"       系统HDR默认: {get_icc_friendly_name(system_cfg.get('hdr_default'))} {is_sys_effective_mark}")
+
         # 用户HDR ICC列表
         print(f"\n     👮 【用户HDR ICC列表（来自 HKCU ICMProfileAC）】")
         if user_cfg.get('hdr_icc'):
             for idx, (icc_path, source) in enumerate(user_cfg['hdr_icc'], 1):
-                default_mark = " (默认值)" if icc_path == user_cfg.get('hdr_default')  else ""
+                default_mark = " (默认值)" if icc_path == user_cfg.get('hdr_default') else ""
                 print(f"    {idx:<2}. {get_icc_friendly_name(icc_path):<30} {source:<6} {icc_path} {default_mark} {get_exists_mark(icc_path)}")
         else:
             print(f"    无")
 
-        # 系统级ICC列表（真正的系统配置，来自HKLM）
-        print(f"\n     🖥️  【系统SDR ICC列表（来自 HKLM ICMProfile）】")
-        if system_cfg.get('sdr_icc'):
-            for idx, (icc_path, source) in enumerate(system_cfg['sdr_icc'], 1):
-                default_mark = " (默认值)" if icc_path == system_cfg.get('sdr_default')  else ""
-                print(f"    {idx:<2}. {get_icc_friendly_name(icc_path):<30} {source:<6} {icc_path} {default_mark} {get_exists_mark(icc_path)}")
-        else:
-            print(f"    无")
-
+        # 系统级HDR ICC列表
         print(f"\n     🖥️  【系统HDR ICC列表（来自 HKLM ICMProfileAC）】")
         if system_cfg.get('hdr_icc'):
             for idx, (icc_path, source) in enumerate(system_cfg['hdr_icc'], 1):
-                default_mark = " (默认值)" if icc_path == system_cfg.get('hdr_default')  else ""
+                default_mark = " (默认值)" if icc_path == system_cfg.get('hdr_default') else ""
                 print(f"    {idx:<2}. {get_icc_friendly_name(icc_path):<30} {source:<6} {icc_path} {default_mark} {get_exists_mark(icc_path)}")
         else:
             print(f"    无")
-            
-        
 
-        # 缓存快照（仅展示，明确标注是缓存）
-        print(f"\n     💾 【系统配置缓存快照（仅展示，非配置源）】")
-        if cache.get('sdr_snapshot'):
-            print(f"    SDR快照: {', '.join([get_icc_friendly_name(p) for p, _ in cache['sdr_snapshot']])}")
+        # 💾 系统配置缓存快照 - HDR
+        print(f"\n     💾 【系统配置缓存快照（仅展示，非配置源，会延迟）- HDR】")
         if cache.get('hdr_snapshot'):
             print(f"    HDR快照: {', '.join([get_icc_friendly_name(p) for p, _ in cache['hdr_snapshot']])}")
-        if not cache.get('sdr_snapshot') and not cache.get('hdr_snapshot'):
+        else:
             print(f"    无")
-            
-        # =============================
-        # Windows 颜色系统默认值
-        # =============================
-        win_profiles = m.get("windows_profiles", {})
-        user_win = win_profiles.get("user", {})
-        sys_win = win_profiles.get("system", {})
 
-        print(f"\n  📋 【Windows配置表明细】")
+        # Windows配置表明细 - HDR
+        print(f"\n  📋 【Windows配置表明细 - HDR】")
+        print(f"    (HDR配置使用 ICMProfileAC 注册表项，与SDR共用Windows配置表)")
         print(f"    👲 Windows用户级默认（HKCU RegisteredProfiles）:")
         if user_win:
             for k, v in user_win.items():
