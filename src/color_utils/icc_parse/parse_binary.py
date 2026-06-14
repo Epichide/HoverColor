@@ -1,33 +1,13 @@
-"""直接解析ICC二进制文件（无外部依赖）- 基于结构体解析"""
+"""直接解析 ICC 二进制文件，并按需导出 JSON 或 Excel。
 
-import struct
-from pathlib import Path
+本模块负责无外部 ICC 解析库的二进制结构解析。命令行入口支持选择性导出
+JSON 和 Excel，GUI 也会复用 parse_icc_binary 获取统一的数据结构。
+"""
+
 from icc_structs import (
-    ICCHeader, TagTableEntry, ICCTypes, parse_tag_type, TAG_TYPE_PARSERS
+    ICCHeader, ICC_HEADER_FIELDS, TagTableEntry, ICCTypes, ParsedField, parse_tag_type
 )
-
-
-# Header 字段定义：名称 -> (偏移量, 字节数, 数据类型)
-HEADER_FIELDS = {
-    "profile_size": (0, 4, "uint32"),
-    "preferred_cmm": (4, 4, "signature"),
-    "version": (8, 4, "version"),
-    "device_class": (12, 4, "signature"),
-    "color_space": (16, 4, "signature"),
-    "pcs": (20, 4, "signature"),
-    "datetime": (24, 12, "datetime"),
-    "signature": (36, 4, "signature"),
-    "primary_platform": (40, 4, "signature"),
-    "flags": (44, 4, "uint32"),
-    "device_manufacturer": (48, 4, "signature"),
-    "device_model": (52, 4, "signature"),
-    "device_attributes": (56, 8, "uint64"),
-    "rendering_intent": (64, 4, "uint32"),
-    "illuminant_xyz": (68, 12, "xyz"),
-    "creator": (80, 4, "signature"),
-    "profile_id": (84, 16, "bytes"),
-    "reserved": (100, 28, "bytes"),
-}
+from icc_serialize import to_json_compatible
 
 
 def parse_icc_binary(icc_path: str) -> dict:
@@ -65,47 +45,20 @@ def parse_icc_binary(icc_path: str) -> dict:
 
 def _parse_header_with_metadata(data: bytes) -> dict:
     """解析Header，每个字段带有元数据"""
-    t = ICCTypes
+    header_obj = ICCHeader.from_bytes(data)
+    header_values = to_json_compatible(header_obj)
+    header_values["reserved"] = header_obj._reserved.hex()
     header = {}
-    
-    # profile_size: offset=0, bytesize=4, base datatype=uint32, datasize=4
-    header["profile_size"] = [t.unpack_uint32(data[0:4]), 0, 4, "uint32", 4]
-    # preferred_cmm: offset=4, bytesize=4, base datatype=signature, datasize=4
-    header["preferred_cmm"] = [t.unpack_signature(data[4:8]), 4, 4, "signature", 4]
-    # version: offset=8, bytesize=4, base datatype=uint32 (semantic: versionNumber)
-    header["version"] = [t.unpack_version(data[8:12]), 8, 4, "uint32", 4]
-    # device_class: offset=12, bytesize=4, base datatype=signature, datasize=4
-    header["device_class"] = [t.unpack_signature(data[12:16]), 12, 4, "signature", 4]
-    # color_space: offset=16, bytesize=4, base datatype=signature, datasize=4
-    header["color_space"] = [t.unpack_signature(data[16:20]), 16, 4, "signature", 4]
-    # pcs: offset=20, bytesize=4, base datatype=signature, datasize=4
-    header["pcs"] = [t.unpack_signature(data[20:24]), 20, 4, "signature", 4]
-    # datetime: offset=24, bytesize=12, base datatype=uint16[6] (year,month,day,hour,min,sec)
-    header["datetime"] = [t.unpack_datetime(data[24:36]).isoformat(), 24, 12, "uint16[6]", 6]
-    # signature: offset=36, bytesize=4, base datatype=signature, datasize=4
-    header["signature"] = [t.unpack_signature(data[36:40]), 36, 4, "signature", 4]
-    # primary_platform: offset=40, bytesize=4, base datatype=signature, datasize=4
-    header["primary_platform"] = [t.unpack_signature(data[40:44]), 40, 4, "signature", 4]
-    # flags: offset=44, bytesize=4, base datatype=uint32, datasize=4
-    header["flags"] = [t.unpack_uint32(data[44:48]), 44, 4, "uint32", 4]
-    # device_manufacturer: offset=48, bytesize=4, base datatype=signature, datasize=4
-    header["device_manufacturer"] = [t.unpack_signature(data[48:52]), 48, 4, "signature", 4]
-    # device_model: offset=52, bytesize=4, base datatype=signature, datasize=4
-    header["device_model"] = [t.unpack_signature(data[52:56]), 52, 4, "signature", 4]
-    # device_attributes: offset=56, bytesize=8, base datatype=uint64, datasize=8
-    header["device_attributes"] = [t.unpack_uint64(data[56:64]), 56, 8, "uint64", 8]
-    # rendering_intent: offset=64, bytesize=4, base datatype=uint32, datasize=4
-    header["rendering_intent"] = [t.unpack_uint32(data[64:68]), 64, 4, "uint32", 4]
-    # illuminant_xyz: offset=68, bytesize=12, base datatype=s15Fixed16[3]
-    xyz = t.unpack_xyz(data[68:80])
-    header["illuminant_xyz"] = [list(xyz), 68, 12, "s15Fixed16[3]", 3]
-    # creator: offset=80, bytesize=4, base datatype=signature, datasize=4
-    header["creator"] = [t.unpack_signature(data[80:84]), 80, 4, "signature", 4]
-    # profile_id: offset=84, bytesize=16, raw bytes (represented as hex)
-    header["profile_id"] = [data[84:100].hex(), 84, 16, "bytes", 16]
-    # reserved: offset=100, bytesize=28, raw bytes (represented as hex)
-    header["reserved"] = [data[100:128].hex(), 100, 28, "bytes", 28]
-    
+
+    for field_name, (offset, bytesize, datatype, datasize) in ICC_HEADER_FIELDS.items():
+        header[field_name] = [
+            header_values.get(field_name),
+            offset,
+            bytesize,
+            datatype,
+            datasize,
+        ]
+
     return header
 
 
@@ -117,6 +70,9 @@ def _parse_tags(data: bytes, tag_count: int) -> dict:
         offset = 132 + i * 12
         entry = TagTableEntry.from_bytes(data, offset)
         tags[entry.signature] = {
+            "signature": _field(entry.signature, offset, 4, "signature", 4),
+            "data_offset": _field(entry.offset, offset + 4, 4, "uint32", 1),
+            "data_size": _field(entry.size, offset + 8, 4, "uint32", 1),
             "offset": entry.offset,
             "size": entry.size,
             "type": None,  # 待解析
@@ -149,7 +105,7 @@ def _parse_all_tag_details(data: bytes, tags: dict) -> dict:
 
         # 使用结构体解析器解析，传入完整数据以便计算相对偏移
         parsed = parse_tag_type(tag_data, type_sig, full_data=data, tag_offset=tag_offset)
-        parsed_dict = _convert_to_dict(parsed)
+        parsed_dict = to_json_compatible(parsed)
 
         # 如果解析器返回错误信息，保留错误字典
         if isinstance(parsed_dict, dict) and parsed_dict.get('error'):
@@ -221,18 +177,19 @@ def _parse_all_tag_details(data: bytes, tags: dict) -> dict:
                     
                     if child_type and child_type in ("curv", "para"):
                         child_parsed_raw = parse_tag_type(child_bytes, child_type, full_data=data, tag_offset=tag_offset + child_rel)
-                        child_parsed = _convert_to_dict(child_parsed_raw)
+                        child_parsed = to_json_compatible(child_parsed_raw)
                     else:
                         child_parsed = None
 
                 # assemble child dict with metadata
+                child_parsed_dict = to_json_compatible(child_parsed)
                 child_entry = {}
                 child_entry['offset'] = tag_offset + child_rel
                 child_entry['bytesize'] = child_size
                 child_entry['datatype'] = child_type
                 # datasize from parsed child
-                if isinstance(child_parsed, dict):
-                    child_ds = _calculate_datasize(child_parsed, child_type)
+                if isinstance(child_parsed_dict, dict) and not child_parsed_dict.get("value") is child_parsed:
+                    child_ds = _calculate_datasize(child_parsed_dict, child_type)
                     if child_ds:
                         child_entry['datasize'] = child_ds
                 elif isinstance(child_parsed, list):
@@ -240,12 +197,15 @@ def _parse_all_tag_details(data: bytes, tags: dict) -> dict:
                     child_entry['datasize'] = len(child_parsed) if child_parsed else 0
 
                 # merge parsed content under child_entry
-                if isinstance(child_parsed, dict):
+                if isinstance(child_parsed_dict, dict) and not child_parsed_dict.get("value") is child_parsed:
                     # remove redundant top-level metadata in child_parsed if present
-                    for k in list(child_parsed.keys()):
+                    for k in list(child_parsed_dict.keys()):
                         if k in ('offset', 'bytesize', 'datatype', 'datasize'):
                             continue
-                        child_entry[k] = child_parsed[k]
+                        child_entry[k] = child_parsed_dict[k]
+                    if child_name == 'matrix' and 'values' in child_parsed_dict:
+                        # Keep the legacy key used by the GUI while exposing structured fields.
+                        child_entry['matrix'] = child_parsed_dict['values']
                 elif isinstance(child_parsed, list):
                     # matrix returns a list of floats
                     child_entry['matrix'] = child_parsed
@@ -253,7 +213,20 @@ def _parse_all_tag_details(data: bytes, tags: dict) -> dict:
                     # raw bytes or None
                     child_entry['value'] = child_parsed
 
+                if isinstance(child_entry, dict):
+                    _apply_mab_child_metadata(
+                        child_entry,
+                        child_name,
+                        child_type,
+                        child_bytes,
+                        tag_offset + child_rel,
+                        child_size,
+                    )
+
                 parsed_dict[child_name] = child_entry
+
+        if isinstance(parsed_dict, dict):
+            _apply_field_metadata(parsed_dict, type_sig, tag_data, tag_offset, tag_size)
 
         # 如果解析结果是单字段包装 {'value': ...}，拆开
         if isinstance(parsed_dict, dict) and list(parsed_dict.keys()) == ['value']:
@@ -264,11 +237,315 @@ def _parse_all_tag_details(data: bytes, tags: dict) -> dict:
     return details
 
 
+def _field(value, offset: int, bytesize: int, datatype: str, datasize: int = None) -> dict:
+    """构造 JSON 友好的字段元信息。"""
+    return to_json_compatible(ParsedField(value, offset, bytesize, datatype, datasize))
+
+
+def _is_field(value) -> bool:
+    """判断值是否已经是 ParsedField 序列化后的结构。"""
+    return isinstance(value, dict) and {"value", "offset", "bytesize", "datatype"}.issubset(value.keys())
+
+
+def _field_value(value, default=None):
+    """兼容裸值与 ParsedField 结构，取出真实解析值。"""
+    if _is_field(value):
+        return value.get("value", default)
+    return value if value is not None else default
+
+
+def _wrap_common_type_header(parsed_dict: dict, tag_offset: int) -> None:
+    """包装所有 tag type 通用头部: type_signature + reserved。"""
+    if "type_signature" in parsed_dict and not _is_field(parsed_dict["type_signature"]):
+        parsed_dict["type_signature"] = _field(
+            parsed_dict["type_signature"], tag_offset, 4, "signature", 4
+        )
+    if "reserved" in parsed_dict and not _is_field(parsed_dict["reserved"]):
+        parsed_dict["reserved"] = _field(
+            parsed_dict["reserved"], tag_offset + 4, 4, "bytes", 4
+        )
+
+
+def _apply_field_metadata(parsed_dict: dict, type_sig: str, tag_data: bytes, tag_offset: int, tag_size: int) -> None:
+    """为常见 tag type 的解析字段补充 value/offset/bytesize/datatype/datasize。
+
+    大数组整体包装，不为每个元素重复写 offset，避免 JSON 体积膨胀。
+    """
+    _wrap_common_type_header(parsed_dict, tag_offset)
+
+    if type_sig == "XYZ ":
+        values = parsed_dict.get("values", [])
+        if not _is_field(values):
+            parsed_dict["values"] = _field(values, tag_offset + 8, max(0, tag_size - 8), "XYZNumber", len(values))
+        if "value" in parsed_dict and not _is_field(parsed_dict["value"]):
+            parsed_dict["value"] = _field(parsed_dict["value"], tag_offset + 8, 12 if values else 0, "XYZNumber", 1 if values else 0)
+
+    elif type_sig == "curv":
+        count = _field_value(parsed_dict.get("count"), 0)
+        if not _is_field(parsed_dict.get("count")):
+            parsed_dict["count"] = _field(count, tag_offset + 8, 4, "uint32", 1)
+        curve_data = parsed_dict.get("curve_data", [])
+        if not _is_field(curve_data):
+            if count == 0:
+                data_offset, data_bytesize, datatype = tag_offset + 12, 0, "none"
+            elif count == 1:
+                data_offset, data_bytesize, datatype = tag_offset + 12, 2, "u8Fixed8"
+            else:
+                data_offset, data_bytesize, datatype = tag_offset + 12, count * 2, "uint16"
+            parsed_dict["curve_data"] = _field(curve_data, data_offset, data_bytesize, datatype, len(curve_data))
+
+    elif type_sig == "para":
+        parameters = parsed_dict.get("parameters", [])
+        if not _is_field(parsed_dict.get("function_type")):
+            parsed_dict["function_type"] = _field(parsed_dict.get("function_type"), tag_offset + 8, 2, "uint16", 1)
+        if "reserved2" in parsed_dict and not _is_field(parsed_dict["reserved2"]):
+            parsed_dict["reserved2"] = _field(parsed_dict["reserved2"], tag_offset + 10, 2, "bytes", 2)
+        if not _is_field(parameters):
+            parsed_dict["parameters"] = _field(parameters, tag_offset + 12, len(parameters) * 4, "s15Fixed16", len(parameters))
+
+    elif type_sig == "text":
+        text = parsed_dict.get("text", "")
+        if not _is_field(text):
+            text_bytesize = len(tag_data[8:].split(b"\x00")[0])
+            parsed_dict["text"] = _field(text, tag_offset + 8, text_bytesize, "ascii", len(text))
+
+    elif type_sig == "desc":
+        _wrap_text_description_fields(parsed_dict, tag_data, tag_offset)
+
+    elif type_sig == "sig ":
+        if "signature" in parsed_dict and not _is_field(parsed_dict["signature"]):
+            parsed_dict["signature"] = _field(parsed_dict["signature"], tag_offset + 8, 4, "signature", 4)
+
+    elif type_sig == "sf32":
+        values = parsed_dict.get("values", [])
+        if not _is_field(values):
+            parsed_dict["values"] = _field(values, tag_offset + 8, len(values) * 4, "s15Fixed16", len(values))
+
+    elif type_sig in ("mAB ", "mBA "):
+        _wrap_lut_ab_fields(parsed_dict, tag_offset)
+
+    elif type_sig in ("mft1", "lut8"):
+        _wrap_lut8_fields(parsed_dict, tag_offset)
+
+    elif type_sig in ("mft2", "lut16"):
+        _wrap_lut16_fields(parsed_dict, tag_offset)
+
+    elif type_sig == "meas":
+        _wrap_measurement_fields(parsed_dict, tag_offset)
+
+    elif type_sig == "dtim":
+        if "value" in parsed_dict and not _is_field(parsed_dict["value"]):
+            parsed_dict["value"] = _field(parsed_dict["value"], tag_offset + 8, 12, "dateTimeNumber", 1)
+
+
+def _wrap_lut_ab_fields(parsed_dict: dict, tag_offset: int) -> None:
+    """包装 mAB/mBA 顶层固定字段。"""
+    field_specs = {
+        "input_channels": (8, 1, "uint8", 1),
+        "output_channels": (9, 1, "uint8", 1),
+        "padding": (10, 2, "bytes", 2),
+        "offset_b_curve": (12, 4, "uint32", 1),
+        "offset_matrix": (16, 4, "uint32", 1),
+        "offset_m_curve": (20, 4, "uint32", 1),
+        "offset_clut": (24, 4, "uint32", 1),
+        "offset_a_curve": (28, 4, "uint32", 1),
+    }
+    for name, (rel, bytesize, datatype, datasize) in field_specs.items():
+        if name in parsed_dict and not _is_field(parsed_dict[name]):
+            parsed_dict[name] = _field(parsed_dict[name], tag_offset + rel, bytesize, datatype, datasize)
+
+
+def _wrap_text_description_fields(parsed_dict: dict, tag_data: bytes, tag_offset: int) -> None:
+    """包装 ICC v2 desc/textDescriptionType 字段。"""
+    ascii_count = parsed_dict.get("ascii_count", 0)
+    if not _is_field(parsed_dict.get("ascii_count")):
+        parsed_dict["ascii_count"] = _field(ascii_count, tag_offset + 8, 4, "uint32", 1)
+
+    ascii_bytesize = min(max(ascii_count, 0), max(len(tag_data) - 12, 0))
+    if "ascii_description" in parsed_dict and not _is_field(parsed_dict["ascii_description"]):
+        parsed_dict["ascii_description"] = _field(
+            parsed_dict["ascii_description"],
+            tag_offset + 12,
+            ascii_bytesize,
+            "ascii",
+            _text_length(parsed_dict["ascii_description"]),
+        )
+
+    unicode_language_offset = 12 + ascii_bytesize
+    unicode_count_offset = unicode_language_offset + 4
+    unicode_text_offset = unicode_count_offset + 4
+    unicode_count = parsed_dict.get("unicode_count", 0)
+    unicode_bytesize = min(max(unicode_count * 2, 0), max(len(tag_data) - unicode_text_offset, 0))
+
+    if "unicode_language_code" in parsed_dict and not _is_field(parsed_dict["unicode_language_code"]):
+        parsed_dict["unicode_language_code"] = _field(parsed_dict["unicode_language_code"], tag_offset + unicode_language_offset, 4, "uint32", 1)
+    if "unicode_count" in parsed_dict and not _is_field(parsed_dict["unicode_count"]):
+        parsed_dict["unicode_count"] = _field(unicode_count, tag_offset + unicode_count_offset, 4, "uint32", 1)
+    if "unicode_description" in parsed_dict and not _is_field(parsed_dict["unicode_description"]):
+        parsed_dict["unicode_description"] = _field(
+            parsed_dict["unicode_description"],
+            tag_offset + unicode_text_offset,
+            unicode_bytesize,
+            "utf16-be",
+            _text_length(parsed_dict["unicode_description"]),
+        )
+
+    script_code_offset = unicode_text_offset + unicode_bytesize
+    script_count_offset = script_code_offset + 2
+    script_text_offset = script_count_offset + 1
+    script_count = parsed_dict.get("script_code_count", 0)
+    script_bytesize = min(max(script_count, 0), max(len(tag_data) - script_text_offset, 0), 67)
+
+    if "script_code_code" in parsed_dict and not _is_field(parsed_dict["script_code_code"]):
+        parsed_dict["script_code_code"] = _field(parsed_dict["script_code_code"], tag_offset + script_code_offset, 2, "uint16", 1)
+    if "script_code_count" in parsed_dict and not _is_field(parsed_dict["script_code_count"]):
+        parsed_dict["script_code_count"] = _field(script_count, tag_offset + script_count_offset, 1, "uint8", 1)
+    if "script_code_description" in parsed_dict and not _is_field(parsed_dict["script_code_description"]):
+        parsed_dict["script_code_description"] = _field(
+            parsed_dict["script_code_description"],
+            tag_offset + script_text_offset,
+            script_bytesize,
+            "mac-roman",
+            _text_length(parsed_dict["script_code_description"]),
+        )
+
+
+def _text_length(value) -> int:
+    """返回文本长度，兼容 None 和非字符串值。"""
+    return len(value) if isinstance(value, str) else 0
+
+
+def _apply_mab_child_metadata(
+    child_entry: dict,
+    child_name: str,
+    child_type: str,
+    child_bytes: bytes,
+    child_offset: int,
+    child_size: int,
+) -> None:
+    """为 mAB/mBA 内部子结构继续补字段级 metadata。"""
+    if child_type in ("curv", "para"):
+        _apply_field_metadata(child_entry, child_type, child_bytes, child_offset, child_size)
+    elif child_name == "matrix":
+        _wrap_mab_matrix_fields(child_entry, child_offset)
+    elif child_name == "clut":
+        _wrap_mab_clut_fields(child_entry, child_offset)
+
+
+def _wrap_mab_matrix_fields(child_entry: dict, child_offset: int) -> None:
+    """包装 mAB/mBA 3x4 矩阵子结构字段。"""
+    _wrap_sub_values(child_entry, "values", child_offset, 48, "s15Fixed16", 12)
+    _wrap_sub_values(child_entry, "coefficients", child_offset, 36, "s15Fixed16", 9)
+    _wrap_sub_values(child_entry, "offsets", child_offset + 36, 12, "s15Fixed16", 3)
+    _wrap_sub_values(child_entry, "matrix", child_offset, 48, "s15Fixed16", 12)
+
+
+def _wrap_mab_clut_fields(child_entry: dict, child_offset: int) -> None:
+    """包装 mAB/mBA CLUT 子结构字段。"""
+    grid_points = child_entry.get("grid_points", [])
+    if not _is_field(grid_points):
+        child_entry["grid_points"] = _field(
+            grid_points,
+            child_offset,
+            len(grid_points),
+            "uint8",
+            len(grid_points),
+        )
+
+    precision = child_entry.get("precision")
+    if not _is_field(precision):
+        child_entry["precision"] = _field(precision, child_offset + 16, 1, "uint8", 1)
+
+    values = child_entry.get("values", [])
+    if not _is_field(values):
+        data_type = child_entry.get("data_type", "uint8")
+        bytes_per_value = 2 if data_type == "uint16" else 1
+        child_entry["values"] = _field(
+            values,
+            child_offset + 20,
+            len(values) * bytes_per_value,
+            data_type,
+            len(values),
+        )
+
+
+def _wrap_lut8_fields(parsed_dict: dict, tag_offset: int) -> None:
+    """包装 mft1/lut8 顶层字段和大数组子结构。"""
+    for name, rel in (("input_channels", 8), ("output_channels", 9), ("clut_grid_points", 10)):
+        if name in parsed_dict and not _is_field(parsed_dict[name]):
+            parsed_dict[name] = _field(parsed_dict[name], tag_offset + rel, 1, "uint8", 1)
+    _wrap_lut_substructures(parsed_dict, tag_offset, matrix_offset=12, input_offset=48, bit_depth=8)
+
+
+def _wrap_lut16_fields(parsed_dict: dict, tag_offset: int) -> None:
+    """包装 mft2/lut16 顶层字段和大数组子结构。"""
+    for name, rel in (("input_channels", 8), ("output_channels", 9), ("clut_grid_points", 10)):
+        if name in parsed_dict and not _is_field(parsed_dict[name]):
+            parsed_dict[name] = _field(parsed_dict[name], tag_offset + rel, 1, "uint8", 1)
+    for name, rel in (("num_input_entries", 48), ("num_output_entries", 50)):
+        if name in parsed_dict and not _is_field(parsed_dict[name]):
+            parsed_dict[name] = _field(parsed_dict[name], tag_offset + rel, 2, "uint16", 1)
+    _wrap_lut_substructures(parsed_dict, tag_offset, matrix_offset=12, input_offset=52, bit_depth=16)
+
+
+def _wrap_lut_substructures(parsed_dict: dict, tag_offset: int, matrix_offset: int, input_offset: int, bit_depth: int) -> None:
+    """包装 lut8/lut16 的矩阵、输入表、CLUT、输出表。"""
+    matrix = parsed_dict.get("matrix")
+    if isinstance(matrix, dict):
+        _wrap_sub_values(matrix, "values", tag_offset + matrix_offset, 36, "s15Fixed16", 9)
+
+    input_table = parsed_dict.get("input_table")
+    if isinstance(input_table, dict):
+        values = input_table.get("values", [])
+        bytes_per_value = 1 if bit_depth == 8 else 2
+        _wrap_sub_values(input_table, "values", tag_offset + input_offset, len(values) * bytes_per_value, f"uint{bit_depth}", len(values))
+
+    clut = parsed_dict.get("clut")
+    if isinstance(clut, dict):
+        input_count = len(_field_value(input_table.get("values"), [])) if isinstance(input_table, dict) else 0
+        input_bytes = input_count * (1 if bit_depth == 8 else 2)
+        values = clut.get("values", [])
+        clut_offset = tag_offset + input_offset + input_bytes
+        _wrap_sub_values(clut, "values", clut_offset, len(values) * (1 if bit_depth == 8 else 2), f"uint{bit_depth}", len(values))
+
+    output_table = parsed_dict.get("output_table")
+    if isinstance(output_table, dict):
+        clut_values = _field_value(clut.get("values"), []) if isinstance(clut, dict) else []
+        input_values = _field_value(input_table.get("values"), []) if isinstance(input_table, dict) else []
+        values = output_table.get("values", [])
+        output_offset = tag_offset + input_offset + (len(input_values) + len(clut_values)) * (1 if bit_depth == 8 else 2)
+        _wrap_sub_values(output_table, "values", output_offset, len(values) * (1 if bit_depth == 8 else 2), f"uint{bit_depth}", len(values))
+
+
+def _wrap_sub_values(container: dict, key: str, offset: int, bytesize: int, datatype: str, datasize: int) -> None:
+    """包装子结构中的同质数组字段。"""
+    if key in container and not _is_field(container[key]):
+        container[key] = _field(container[key], offset, bytesize, datatype, datasize)
+
+
+def _wrap_measurement_fields(parsed_dict: dict, tag_offset: int) -> None:
+    """包装 measurementType 字段。"""
+    specs = {
+        "observer": (8, 4, "uint32", 1),
+        "xyz_backing": (12, 12, "XYZNumber", 1),
+        "geometry": (24, 4, "uint32", 1),
+        "flare": (28, 4, "uint32", 1),
+        "illuminant": (32, 12, "XYZNumber", 1),
+    }
+    for name, (rel, bytesize, datatype, datasize) in specs.items():
+        if name in parsed_dict and not _is_field(parsed_dict[name]):
+            parsed_dict[name] = _field(parsed_dict[name], tag_offset + rel, bytesize, datatype, datasize)
+
+
 def _calculate_datasize(parsed_dict: dict, type_sig: str) -> int:
-    """根据datatype计算datasize（数据数量）"""
-    # 根据不同类型计算数据数量
+    """根据datatype计算datasize（数据数量）。
+
+    仅当当前 datatype 对应同质数据集合时返回数量；如果结构内部混合多种
+    数据类型（如 mAB/mBA、mft1/mft2、measurementType），不填写 datasize。
+    """
     if type_sig in ("XYZ ",):
-        return 3
+        values = parsed_dict.get("values", [])
+        return len(values) if isinstance(values, list) else 0
     elif type_sig in ("curv",):
         return parsed_dict.get("count", 0)
     elif type_sig in ("para",):
@@ -286,8 +563,8 @@ def _calculate_datasize(parsed_dict: dict, type_sig: str) -> int:
     elif type_sig in ("text",):
         return len(parsed_dict.get("text", ""))
     elif type_sig in ("matrix",):
-        # 3x3 matrix = 9 values
-        return 9
+        # mAB/mBA matrix = 3x4 = 12 values (规范 10.12.5)
+        return 12
     elif type_sig in ("clut",):
         # CLUT datasize = product of grid points * output_channels
         grid = parsed_dict.get("grid_points", [])
@@ -298,143 +575,25 @@ def _calculate_datasize(parsed_dict: dict, type_sig: str) -> int:
                 total *= g
             return total * output_channels
         return 0
-    elif type_sig in ("mAB ", "mBA "):
-        clut = parsed_dict.get("clut", {})
-        if isinstance(clut, dict):
-            grid = clut.get("grid_points", [])
-            if len(grid) >= 3:
-                return grid[0] * grid[1] * grid[2] * parsed_dict.get("output_channels", 3)
-        return 0
-    elif type_sig in ("lut8", "lut16"):
-        return parsed_dict.get("clut_values_count", 0)
     elif type_sig in ("clrt",):
         return parsed_dict.get("count", 0)
-    elif type_sig in ("meas",):
-        return 1
     else:
         return 0
 
 
-def _is_null_signature(value: str) -> bool:
-    """检查签名字段是否为空（全零或全空白）"""
-    if not isinstance(value, str):
-        return False
-    return all(c in ('\x00', ' ', '\t') for c in value)
-
-
-def _convert_to_dict(obj) -> dict:
-    """将dataclass对象转换为字典"""
-    from datetime import datetime
-    
-    if isinstance(obj, dict):
-        return obj
-    if hasattr(obj, "__dataclass_fields__"):
-        result = {}
-        for field, value in obj.__dict__.items():
-            if field.startswith("_"):
-                continue
-            if isinstance(value, tuple):
-                result[field] = list(value) if len(value) <= 3 else value
-            elif isinstance(value, datetime):
-                result[field] = value.isoformat()
-            elif isinstance(value, str) and _is_null_signature(value):
-                result[field] = None
-            else:
-                result[field] = value
-        return result
-    return {"value": obj}
-
-
-def _parse_tag_details_old(data: bytes, tags: dict) -> dict:
-    """解析关键Tag的详细数据（旧版本，保留参考）"""
-    details = {}
-
-    for sig, info in tags.items():
-        tag_data = data[info["offset"]:info["offset"]+info["size"]]
-        tag_type = info["type"]
-
-        if tag_type == "XYZ ":
-            xyz = _parse_xyz_tag(tag_data)
-            details[sig] = {"type": "XYZ", "value": xyz}
-        elif tag_type == "mluc":
-            text = _parse_mluc_tag(tag_data)
-            details[sig] = {"type": "mluc", "value": text}
-        elif tag_type == "curv":
-            curve = _parse_curv_tag(tag_data)
-            details[sig] = {"type": "curv", "value": curve}
-        elif tag_type == "sf32":
-            values = _parse_sf32_tag(tag_data)
-            details[sig] = {"type": "sf32", "value": values}
-        elif tag_type == "sig ":
-            sig_val = tag_data[8:12].decode("ascii", errors="replace")
-            details[sig] = {"type": "sig", "value": sig_val}
-        elif tag_type in ("mAB ", "mBA "):
-            lut_info = _parse_lut_tag(tag_data, tag_type)
-            details[sig] = lut_info
-
-    return details
-
-
-def _parse_xyz_tag(data: bytes) -> dict:
-    """解析XYZ Tag"""
-    t = ICCTypes
-    xyz = t.unpack_xyz(data[8:20])
-    return {"X": xyz[0], "Y": xyz[1], "Z": xyz[2]}
-
-
-def _parse_mluc_tag(data: bytes) -> str:
-    """解析多语言Unicode描述Tag"""
-    from icc_structs import MultiLocalizedUnicodeType
-    mluc = MultiLocalizedUnicodeType.from_bytes(data)
-    return mluc.get_primary_text()
-
-
-def _parse_curv_tag(data: bytes) -> dict:
-    """解析曲线Tag"""
-    from icc_structs import CurveType
-    curve = CurveType.from_bytes(data)
-    return {
-        "count": curve.count,
-        "data": curve.curve_data,
-    }
-
-
-def _parse_sf32_tag(data: bytes) -> list:
-    """解析s15Fixed16数组Tag"""
-    t = ICCTypes
-    count = (len(data) - 8) // 4
-    values = []
-    for i in range(count):
-        values.append(t.unpack_s15fixed16(data[8 + i*4:12 + i*4]))
-    return values
-
-
-def _parse_lut_tag(data: bytes, tag_type: str) -> dict:
-    """解析LUT Tag（mAB/mBA）"""
-    t = ICCTypes
-    result = {"type": tag_type.strip()}
-
-    offset = 8
-    input_channels = t.unpack_uint8(data[offset:offset+1])
-    output_channels = t.unpack_uint8(data[offset+1:offset+2])
-    grid_points = t.unpack_uint8(data[offset+2:offset+3])
-
-    result["input_channels"] = input_channels
-    result["output_channels"] = output_channels
-    result["grid_points"] = grid_points
-
-    return result
-
-
 if __name__ == "__main__":
-    import sys
     import argparse
+    from pathlib import Path
+
+    from icc_export_excel import export_to_excel
     from export_json import export_to_json, print_summary
 
     parser = argparse.ArgumentParser(description="ICC Profile Binary Parser")
-    parser.add_argument("icc_file", nargs="?", default=r"D:\material\CODE\HoverColor\src\color_utils\profiles\sRGB.icc")
+    parser.add_argument("icc_file", nargs="?", default=r"C:\Users\Admin\ALL\CODE\7-HoverColor\HoverColor\src\color_utils\profiles\sRGB.icc")
     parser.add_argument("-o", "--output", help="导出JSON文件路径")
     parser.add_argument("--no-json", action="store_true", help="不导出JSON")
+    parser.add_argument("--excel", action="store_true", help="同时导出Excel文件")
+    parser.add_argument("--excel-output", help="导出Excel文件路径；设置后会自动启用Excel导出")
     args = parser.parse_args()
 
     data = parse_icc_binary(args.icc_file)
@@ -442,3 +601,10 @@ if __name__ == "__main__":
 
     if not args.no_json:
         export_to_json(data, output_path=args.output, icc_path=args.icc_file)
+
+    if args.excel or args.excel_output:
+        excel_output = args.excel_output
+        if excel_output is None:
+            excel_output = str(Path(args.icc_file).with_name(f"{Path(args.icc_file).stem}_parsed.xlsx"))
+        export_to_excel(data, excel_output)
+        print(f"Excel已导出: {excel_output}")

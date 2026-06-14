@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 from datetime import datetime
+from icc_serialize import to_json_compatible
 
 
 class ICCJSONEncoder(json.JSONEncoder):
@@ -35,8 +36,9 @@ def export_to_json(data: dict, output_path: str = None, icc_path: str = None):
         else:
             output_path = f"icc_parsed_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-    # 添加导出时间
+    # 添加导出时间，并确保嵌套结构体/bytes/datetime 都已转换为 JSON 兼容格式
     data["export_time"] = datetime.now().isoformat()
+    data = to_json_compatible(data)
 
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False, cls=ICCJSONEncoder)

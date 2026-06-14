@@ -1,0 +1,227 @@
+/* ICC Inspector GUI stylesheet.
+ *
+ * Style follows the existing HoverColor css convention:
+ * white background, light-blue borders, compact tables, and readable tabs.
+ */
+
+QMainWindow {
+    background-color: #ffffff;
+    font-family: "Arial";
+    font-size: __BODY_FONT_PT__pt;
+}
+
+QWidget {
+    background-color: #ffffff;
+    color: #333333;
+    font-family: "Arial";
+    font-size: __BODY_FONT_PT__pt;
+}
+
+QLabel {
+    color: #333333;
+    font-family: "Arial";
+    font-size: __BODY_FONT_PT__pt;
+}
+
+QLabel#iccTitleLabel {
+    font-size: __TITLE_FONT_PT__pt;
+    font-weight: bold;
+}
+
+QLabel#iccHelpLabel,
+QLabel#iccPreviewTitle {
+    font-size: __BODY_FONT_PT__pt;
+    line-height: 150%;
+}
+
+QLabel#iccImagePreview {
+    background-color: #fafafa;
+    border: 1px solid #cccccc;
+    font-size: __BODY_FONT_PT__pt;
+}
+
+QFrame#iccComponentCard {
+    background-color: #fbfdff;
+    border: 1px solid #A0C3DC;
+    border-radius: 6px;
+}
+
+QMenuBar {
+    background-color: #f7fbff;
+    border-bottom: 1px solid #A0C3DC;
+    spacing: 2px;
+}
+
+QMenuBar::item {
+    background-color: transparent;
+    border-right: 1px solid #D5E6F2;
+    padding: 5px 10px;
+}
+
+QMenuBar::item:selected {
+    background-color: #DBE7F1;
+    border: 1px solid #A0C3DC;
+}
+
+QMenu {
+    background-color: #ffffff;
+    border: 1px solid #A0C3DC;
+    padding: 4px 0px;
+}
+
+QMenu::item {
+    padding: 5px 24px 5px 20px;
+}
+
+QMenu::item:selected {
+    background-color: #DBE7F1;
+    color: #333333;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: #A0C3DC;
+    margin: 5px 8px;
+}
+
+QTabWidget::tab-bar {
+    left: 2px;
+}
+
+QTabBar::tab {
+    background-color: #DBE7F1;
+    color: #333333;
+    border: 1px solid #A0C3DC;
+    border-bottom: none;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    padding: 6px 12px;
+    min-height: 22px;
+    margin-right: 2px;
+    font-size: __TAB_FONT_PT__pt;
+}
+
+QTabBar::tab:selected {
+    background-color: #ffffff;
+    border: 1px solid #A0C3DC;
+    border-bottom: 1px solid #ffffff;
+    font-weight: bold;
+}
+
+QTabWidget::pane {
+    border: 1px solid #A0C3DC;
+    border-radius: 4px;
+    margin-top: -1px;
+}
+
+QSplitter::handle {
+    background-color: #DBE7F1;
+}
+
+QTableWidget,
+QTreeWidget {
+    border: 1px solid #A0C3DC;
+    border-radius: 4px;
+    gridline-color: #A0C3DC;
+    background-color: #ffffff;
+    alternate-background-color: #f7fbff;
+    font-size: __TABLE_FONT_PT__pt;
+}
+
+QTableWidget::item,
+QTreeWidget::item {
+    padding: 2px 3px;
+    border: 1px solid #DBE7F1;
+    color: #333333;
+    background-color: transparent;
+    font-size: __TABLE_FONT_PT__pt;
+}
+
+QTableWidget::item:selected,
+QTreeWidget::item:selected {
+    background-color: #0078d4;
+    color: #ffffff;
+}
+
+QTableWidget::item:hover,
+QTreeWidget::item:hover {
+    background-color: #f0f7ff;
+    color: #333333;
+}
+
+QTableWidget::item:selected:hover,
+QTreeWidget::item:selected:hover {
+    background-color: #0078d4;
+    color: #ffffff;
+}
+
+QHeaderView::section {
+    background-color: #DBE7F1;
+    border: 1px solid #A0C3DC;
+    font-weight: bold;
+    color: #333333;
+    padding: 5px 7px;
+    border-left: none;
+    font-size: __TABLE_FONT_PT__pt;
+}
+
+QHeaderView::section:first {
+    border-left: 1px solid #A0C3DC;
+}
+
+QScrollArea {
+    border: none;
+    background-color: #ffffff;
+}
+
+QAbstractScrollArea::corner {
+    background-color: #ffffff;
+    border: none;
+}
+
+QScrollBar:vertical {
+    border: 1px solid gray;
+    background-color: #f5f7fa;
+    width: 8px;
+    margin: 0px;
+}
+
+QScrollBar:horizontal {
+    border: 1px solid gray;
+    background-color: #f5f7fa;
+    height: 8px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #A0C3DC;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #A0C3DC;
+    border-radius: 4px;
+    min-width: 20px;
+}
+
+QScrollBar::handle:vertical:hover,
+QScrollBar::handle:horizontal:hover {
+    background-color: #99cef9;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical,
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    background-color: transparent;
+    width: 0px;
+    height: 0px;
+}
+
+QScrollBar::sub-page:vertical,
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:horizontal,
+QScrollBar::add-page:horizontal {
+    background-color: transparent;
+}
