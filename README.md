@@ -7,6 +7,11 @@ example
 ![20250427011134](README/20260302045238.png)
 ![20250427011134](README/20260302045239.png)
 
+
+## Install
+
+pyinstaller main.spec
+
 ## Usage
 
 * pixel hover color : ctrl + `

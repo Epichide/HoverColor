@@ -1,1 +1,14 @@
 *.pyc
+*.iml
+*.xml
+dist/
+build/
+src/color_utils/icc_parse/output/
+
+src/color_utils/test/python-lcms2-main/
+
+src/color_utils/test/python-lcms2-main.zip
+.gitignore
+src/color_utils/icc_parse/resource/
+
+.vscode/
