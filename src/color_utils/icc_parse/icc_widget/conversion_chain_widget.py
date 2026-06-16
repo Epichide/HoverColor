@@ -15,11 +15,14 @@ from PyQt5.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QPlainTextEdit,
     QPushButton,
     QScrollArea,
+    QSizePolicy,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -109,12 +112,15 @@ class ConversionChainWidget(QWidget):
         component_layout.addLayout(component_header_layout)
 
         self.visual_panel = QWidget()
+        self.visual_panel.setMinimumHeight(280)
         self.visual_layout = QHBoxLayout(self.visual_panel)
         self.visual_layout.setContentsMargins(8, 8, 8, 8)
         self.visual_layout.setSpacing(12)
 
         self.component_scroll_area = QScrollArea()
         self.component_scroll_area.setWidgetResizable(True)
+        self.component_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.component_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.component_scroll_area.setWidget(self.visual_panel)
         component_layout.addWidget(self.component_scroll_area, 1)
         splitter.addWidget(component_container)
@@ -129,21 +135,31 @@ class ConversionChainWidget(QWidget):
         self.image_label = QLabel()
         self.image_label.setObjectName("iccImagePreview")
         self.image_label.setAlignment(Qt.AlignCenter)
-        self.image_label.setMinimumHeight(180)
+        self.image_label.setMinimumHeight(40)
         self.image_label.setScaledContents(False)
 
         self.figure_scroll_area = QScrollArea()
         self.figure_scroll_area.setWidgetResizable(True)
         self.figure_scroll_area.setWidget(self.image_label)
+        self.figure_scroll_area.viewport().installEventFilter(self)
         figure_layout.addWidget(self.figure_scroll_area, 1)
         splitter.addWidget(figure_container)
 
         splitter.setCollapsible(0, False)
         splitter.setCollapsible(1, False)
         splitter.setCollapsible(2, False)
-        splitter.setSizes([190, 320, 260])
+        splitter.setSizes([150, 380, 200])
+        splitter.setStretchFactor(0, 0)
+        splitter.setStretchFactor(1, 3)
+        splitter.setStretchFactor(2, 1)
+        splitter.splitterMoved.connect(lambda *_: self._update_scaled_pixmap())
         layout.addWidget(splitter, 1)
         self.retranslate_ui()
+
+    def eventFilter(self, obj, event):  # noqa: N802 - Qt API
+        if obj is self.figure_scroll_area.viewport() and event.type() == event.Resize:
+            self._update_scaled_pixmap()
+        return super().eventFilter(obj, event)
 
     def set_language(self, language: str) -> None:
         """Switch this conversion-chain widget between English and Chinese."""
@@ -243,7 +259,11 @@ class ConversionChainWidget(QWidget):
         self.image_label.setText(message)
 
     def _render_components(self, components: List[Dict[str, Any]]) -> None:
-        """Render chain components from left to right."""
+        """Render chain components from left to right.
+
+        组件按 6 槽栅格布局：每个组件卡片占 1/6 宽度，少于 6 个时
+        在左右两侧用 addStretch 居中（如 2 个组件 -> 居中占 2/6）。
+        """
         self._clear_visual_layout()
         if not components:
             self.reset_view_button.setEnabled(False)
@@ -251,12 +271,19 @@ class ConversionChainWidget(QWidget):
             return
 
         self.reset_view_button.setEnabled(True)
-        self.visual_layout.addStretch(1)
+        n = len(components)
+        total_slots = max(6, n)
+        left_pad = (total_slots - n) // 2
+        right_pad = total_slots - n - left_pad
+        if left_pad > 0:
+            self.visual_layout.addStretch(left_pad)
         for index, component in enumerate(components):
             if index:
                 self.visual_layout.addWidget(_arrow_label())
-            self.visual_layout.addWidget(_create_component_card(component, self.language))
-        self.visual_layout.addStretch(1)
+            self.visual_layout.addWidget(_create_component_card(component, self.language), 1)
+        if right_pad > 0:
+            self.visual_layout.addStretch(right_pad)
+        self.visual_panel.adjustSize()
 
     def _render_reference_figure(self, row_data: Dict[str, str]) -> None:
         """Render the selected chain's static JPG reference figure."""
@@ -283,7 +310,7 @@ class ConversionChainWidget(QWidget):
         self.image_label.clear()
         self.image_label.setText("")
         self.image_label.setPixmap(self.current_pixmap)
-        self.image_label.setMinimumSize(self.current_pixmap.size())
+        self.image_label.setMinimumSize(0, 0)
         self._update_scaled_pixmap()
 
     def _update_scaled_pixmap(self) -> None:
@@ -294,14 +321,13 @@ class ConversionChainWidget(QWidget):
         if target_size.width() < 8 or target_size.height() < 8:
             self.image_label.setText("")
             self.image_label.setPixmap(self.current_pixmap)
-            self.image_label.setMinimumSize(self.current_pixmap.size())
             return
         target_size.setWidth(max(1, target_size.width() - 24))
         target_size.setHeight(max(1, target_size.height() - 24))
         scaled = self.current_pixmap.scaled(target_size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.image_label.setText("")
         self.image_label.setPixmap(scaled)
-        self.image_label.setMinimumSize(scaled.size())
+        self.image_label.setMinimumSize(0, 0)
 
     def _clear_visual_layout(self) -> None:
         """Remove old visualization widgets."""
@@ -508,13 +534,76 @@ def _clut_component(title: str, clut_data: dict, axis_labels: Sequence[str]) -> 
     }
 
 
+class _SquareBox(QWidget):
+    """容器：强制内部子 widget 保持 1:1 宽高比，居中显示。
+
+    用于把曲线/矩阵/CLUT 绘图区维持为正方形，外部 (卡片) 仍可
+    随窗口横向收放。可选 ``font_adapter(side)`` 在每次 resize 时按
+    当前正方形边长调整子 widget 的字体大小。
+    """
+
+    def __init__(self, child: QWidget, font_adapter=None, parent: QWidget = None) -> None:
+        super().__init__(parent)
+        self._child = child
+        self._font_adapter = font_adapter
+        child.setParent(self)
+        self.setMinimumSize(80, 80)
+
+    def resizeEvent(self, event) -> None:  # noqa: N802 - Qt API
+        side = min(self.width(), self.height())
+        x = (self.width() - side) // 2
+        y = (self.height() - side) // 2
+        self._child.setGeometry(x, y, side, side)
+        if self._font_adapter is not None and side > 0:
+            self._font_adapter(side)
+        super().resizeEvent(event)
+
+
+def _create_collapsible_text(title: str, text: str) -> QWidget:
+    """折叠式文本块：默认折叠，点击标题展开；内容可选中复制。"""
+    container = QWidget()
+    box = QVBoxLayout(container)
+    box.setContentsMargins(0, 0, 0, 0)
+    box.setSpacing(2)
+
+    toggle = QToolButton()
+    toggle.setText(f"\u25B6 {title}")
+    toggle.setCheckable(True)
+    toggle.setChecked(False)
+    toggle.setToolButtonStyle(Qt.ToolButtonTextOnly)
+    toggle.setStyleSheet(
+        "QToolButton { border: none; color: #1f5f9c; font-weight: 600; "
+        "padding: 2px 4px; text-align: left; }"
+        "QToolButton:hover { color: #0078d4; }"
+    )
+
+    body = QPlainTextEdit()
+    body.setPlainText(text)
+    body.setReadOnly(True)
+    body.setLineWrapMode(QPlainTextEdit.WidgetWidth)
+    body.setStyleSheet(
+        "QPlainTextEdit { color: #333333; font-family: Consolas; font-size: 9pt; "
+        "background-color: #f7fbff; border: 1px solid #c8dced; padding: 4px; }"
+    )
+    body.setVisible(False)
+
+    def _toggle(checked: bool) -> None:
+        toggle.setText(("\u25BC " if checked else "\u25B6 ") + title)
+        body.setVisible(checked)
+
+    toggle.toggled.connect(_toggle)
+    box.addWidget(toggle)
+    box.addWidget(body)
+    return container
+
+
 def _create_component_card(component: Dict[str, Any], language: str) -> QWidget:
     """Create a card widget for one conversion component."""
     card = QFrame()
     card.setObjectName("iccComponentCard")
     card.setFrameShape(QFrame.StyledPanel)
     kind = component.get("kind")
-    card.setMinimumWidth(540 if kind == "clut" else 320)
+    card.setMinimumWidth(260 if kind == "clut" else 150)
     layout = QVBoxLayout(card)
     layout.setContentsMargins(8, 8, 8, 8)
     layout.setSpacing(6)
@@ -528,7 +617,21 @@ def _create_component_card(component: Dict[str, Any], language: str) -> QWidget:
     if kind == "curve":
         layout.addWidget(_create_curve_plot(component, language), 1)
     elif kind == "matrix":
-        layout.addWidget(_create_matrix_table(component), 1)
+        table = _create_matrix_table(component)
+
+        def _adapt_matrix_font(side: int, _t=table) -> None:
+            pt = max(6, min(13, int(side / 22)))
+            f = _t.font()
+            f.setPointSize(pt)
+            _t.setFont(f)
+            hh = _t.horizontalHeader()
+            vh = _t.verticalHeader()
+            hf = hh.font()
+            hf.setPointSize(max(5, pt - 1))
+            hh.setFont(hf)
+            vh.setFont(hf)
+
+        layout.addWidget(_SquareBox(table, font_adapter=_adapt_matrix_font), 1)
     elif kind == "clut":
         layout.addWidget(_create_clut_view(component), 1)
     else:
@@ -544,7 +647,8 @@ def _create_curve_plot(component: Dict[str, Any], language: str) -> QWidget:
     layout.setSpacing(4)
 
     plot = pg.PlotWidget()
-    plot.setMinimumSize(320, 250)
+    plot.setMinimumSize(80, 80)
+    plot.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
     plot.setBackground("w")
     plot.showGrid(x=True, y=True, alpha=0.25)
     inverse = bool(component.get("inverse", False))
@@ -561,18 +665,24 @@ def _create_curve_plot(component: Dict[str, Any], language: str) -> QWidget:
             x_values, y_values = y_values, x_values
         color = CHANNEL_COLORS[index % len(CHANNEL_COLORS)]
         plot.plot(x_values, y_values, pen=pg.mkPen(color, width=5.0), name=tr_display(label, language))
-    layout.addWidget(plot, 1)
+
+    def _adapt_curve_font(side: int) -> None:
+        pt = max(6, min(14, int(side / 18)))
+        font = QFont()
+        font.setPointSize(pt)
+        for axis_name in ("bottom", "left", "top", "right"):
+            axis = plot.getAxis(axis_name)
+            if axis is not None:
+                axis.setStyle(tickFont=font)
+                axis.label.setFont(font)
+
+    layout.addWidget(_SquareBox(plot, font_adapter=_adapt_curve_font), 1)
 
     formula = _curve_formula_text(component.get("curves", []), inverse)
     if formula:
-        formula_label = QLabel(formula)
-        formula_label.setWordWrap(True)
-        formula_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        formula_label.setStyleSheet(
-            "QLabel { color: #333333; font-family: Consolas; font-size: 9pt; "
-            "background-color: #f7fbff; border: 1px solid #c8dced; padding: 4px; }"
-        )
-        layout.addWidget(formula_label)
+        layout.addWidget(_create_collapsible_text(
+            tr_display("Formula", language), formula
+        ))
     return container
 
 
@@ -592,11 +702,11 @@ def _create_matrix_table(component: Dict[str, Any]) -> QWidget:
     table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
     table.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
     table.setAlternatingRowColors(False)
-    table.setMinimumSize(max(390, column_count * 132 + 78), 210)
+    table.setMinimumSize(80, 80)
+    table.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
     table.setStyleSheet(
         "QTableWidget#iccMatrixTable {"
         "font-family: Consolas;"
-        "font-size: 10pt;"
         "font-weight: 600;"
         "gridline-color: #A0C3DC;"
         "background-color: #ffffff;"
@@ -612,7 +722,6 @@ def _create_matrix_table(component: Dict[str, Any]) -> QWidget:
         "}"
         "QTableWidget#iccMatrixTable QHeaderView::section {"
         "font-family: Arial;"
-        "font-size: 9pt;"
         "font-weight: bold;"
         "padding: 3px 6px;"
         "background-color: #DBE7F1;"
@@ -634,8 +743,8 @@ def _create_matrix_table(component: Dict[str, Any]) -> QWidget:
         table.setColumnWidth(column, 128)
     for row in range(row_count):
         table.setRowHeight(row, 34)
-    table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-    table.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
+    table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+    table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
     install_copy_shortcut(table)
     return table
 
@@ -664,7 +773,7 @@ def _create_clut_view(component: Dict[str, Any]) -> QWidget:
     axis_labels = _normalized_axis_labels(component.get("axis_labels"))
     if len(grid_points) >= 3 and output_channels >= 1 and values and gl is not None:
         return _create_clut_3d_view(grid_points, output_channels, values, axis_labels)
-    return _create_clut_2d_view(grid_points, output_channels, values, axis_labels)
+    return _SquareBox(_create_clut_2d_view(grid_points, output_channels, values, axis_labels))
 
 
 def _create_clut_3d_view(
@@ -680,7 +789,8 @@ def _create_clut_3d_view(
     layout.setSpacing(4)
 
     view = gl.GLViewWidget()
-    view.setMinimumSize(520, 320)
+    view.setMinimumSize(80, 80)
+    view.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
     view.setBackgroundColor("w")
     view.setCameraPosition(distance=2.2, elevation=22, azimuth=35)
     grid = gl.GLGridItem()
@@ -697,7 +807,7 @@ def _create_clut_3d_view(
     axis_hint = QLabel(_format_axis_hint(axis_labels))
     axis_hint.setAlignment(Qt.AlignCenter)
     axis_hint.setStyleSheet("QLabel { color: #333333; font-weight: 600; padding: 2px; }")
-    layout.addWidget(view, 1)
+    layout.addWidget(_SquareBox(view), 1)
     layout.addWidget(axis_hint)
     return container
 
@@ -710,7 +820,8 @@ def _create_clut_2d_view(
 ) -> QWidget:
     """Create a 2D CLUT projection if 3D rendering is unavailable."""
     plot = pg.PlotWidget()
-    plot.setMinimumSize(520, 320)
+    plot.setMinimumSize(80, 80)
+    plot.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
     plot.setBackground("w")
     plot.showGrid(x=True, y=True, alpha=0.25)
     labels = _normalized_axis_labels(axis_labels)

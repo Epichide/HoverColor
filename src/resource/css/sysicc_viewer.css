@@ -5,7 +5,7 @@
 QMainWindow {
     background-color: #ffffff;
     font-family: "Arial";
-    font-size: 13px;
+    font-size: 15px;
 }
 
 /* =============== MonitorConfigWindow 和 ICCViewerWidget 样式 =============== */
@@ -36,7 +36,7 @@ QGroupBox::title {
     background-color: #ffffff;
     color: #333;
     font-weight: bold;
-    font-size: 13px;
+    font-size: 15px;
 }
 
 /* =============== QPushButton 样式 =============== */
@@ -48,7 +48,7 @@ QPushButton {
     padding: 4px 12px;
     margin: 0 4px;
     font-family: "Arial";
-    font-size: 13px;
+    font-size: 15px;
 }
 
 QPushButton:hover {
@@ -63,7 +63,7 @@ QPushButton:pressed {
 QLabel {
     color: #333;
     font-family: "Arial";
-    font-size: 13px;
+    font-size: 15px;
     spacing: 4px;
 }
 
@@ -89,7 +89,7 @@ QTableWidget::item {
     color: #333;
     background-color: transparent;
     font-family: "Arial";
-    font-size: 12px;
+    font-size: 14px;
 }
 
 QHeaderView::section {
@@ -100,7 +100,7 @@ QHeaderView::section {
     padding: 4px 6px;
     border-left: none;
     font-family: "Arial";
-    font-size: 12px;
+    font-size: 14px;
 }
 
 QHeaderView::section:first {

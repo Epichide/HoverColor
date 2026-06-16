@@ -1,9 +1,9 @@
 {
     "colorspace": {
-        "RGB": true,
-        "HSV": true,
-        "Lab": true,
-        "XYZ": true,
+        "RGB": false,
+        "HSV": false,
+        "Lab": false,
+        "XYZ": false,
         "YUV": true,
         "Record": true
     },
@@ -30,7 +30,7 @@
         ]
     },
     "gamut": "CUSTOM",
-    "zoom": 100.0,
+    "zoom": 70.0,
     "metrics": [
         "RGB",
         "XYZ",
@@ -102,6 +102,6 @@
             0.8249053955078125
         ]
     },
-    "fontsize": 8,
-    "loss_hover_opacity": 0.2
+    "fontsize": 14,
+    "loss_hover_opacity": 0.9
 }

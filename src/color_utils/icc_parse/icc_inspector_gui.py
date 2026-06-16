@@ -196,6 +196,17 @@ class ICCInspectorGUI(QMainWindow):
         for name, value in font_sizes.items():
             style = style.replace(f"__{name}__", str(value))
         self.setStyleSheet(style)
+
+        # Force tab/menu fonts via setFont so the new sizes actually apply
+        # even on platforms where QSS font-size on QMenuBar is ignored.
+        tab_font = QFont()
+        tab_font.setPointSizeF(float(font_sizes['TAB_FONT_PT']))
+        self.menuBar().setFont(tab_font)
+        for menu in self.menuBar().findChildren(QMenu):
+            menu.setFont(tab_font)
+        for tabs in self.findChildren(QTabWidget):
+            tabs.tabBar().setFont(tab_font)
+        self.statusBar().setFont(tab_font)
         print(
             "ICC_INSPECTOR_FONT_SIZES:",
             f"base={font_sizes['BASE_FONT_PT']}pt",
@@ -213,10 +224,10 @@ class ICCInspectorGUI(QMainWindow):
             base_pt = 9.0
 
         # Keep tabs compact, while making content/table slightly more readable.
-        tab_pt = max(8.5, min(base_pt, 10.0))
-        body_pt = max(10.0, min(base_pt + 1.0, 12.0))
-        table_pt = max(10.5, min(base_pt + 1.5, 12.5))
-        title_pt = max(12.0, min(body_pt + 2.0, 15.0))
+        tab_pt = max(8.0, min(base_pt - 1.0, 9.0))
+        body_pt = max(9.5, min(base_pt + 0.5, 11.0))
+        table_pt = max(9.5, min(base_pt + 1.0, 11.5))
+        title_pt = max(11.0, min(body_pt + 1.5, 13.5))
 
         return {
             "BASE_FONT_PT": round(base_pt, 1),

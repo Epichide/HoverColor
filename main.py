@@ -14,7 +14,7 @@ from src.YUV import YUVChart
 from src.Lab import LabChart
 # from src.Jch import JchChart
 from src.XYZ import XYZChart
-from src.color_utils.icc_extend import update_custom_icc_cache_proj
+from src.color_utils.icc_parse.icc_extend import update_custom_icc_cache_proj
 from src.hue import HueChart
 from src.record import RecordForm
 from src.screenshoot import Screenshoot
@@ -23,6 +23,7 @@ from src.wid_utils.basewid_utils import DynamicGridLayout
 from src.utils.file_utils import _get_file
 from src.wid_utils.hotkeys_utils.response_key import GLOBAL_PRESS, listener
 from src.sysicc_viewer import ICCViewerWidget
+from src.color_utils.icc_parse.icc_inspector_gui import ICCInspectorGUI
 
 #rom src.color_picker import ScaleWindow
 
@@ -86,6 +87,8 @@ class App(QWidget):
         
         # 初始化ICC查看器
         self.icc_viewer = None
+        # 初始化ICC Inspector
+        self.icc_inspector = None
 
         self.show()
         self.shot1.show()
@@ -159,6 +162,11 @@ class App(QWidget):
         self.menu.addAction(self.action_icc_viewer)
         self.action_icc_viewer.triggered.connect(self.open_icc_viewer)
 
+        # 添加ICC Inspector菜单项
+        self.action_icc_inspector = QAction("ICC Inspector", self)
+        self.menu.addAction(self.action_icc_inspector)
+        self.action_icc_inspector.triggered.connect(self.open_icc_inspector)
+
         self.action_quit=QAction("Quit",self)
         self.menu.addAction(self.action_quit)
         self.action_quit.triggered.connect(self.close)
@@ -167,6 +175,8 @@ class App(QWidget):
     def close(self):
         if self.icc_viewer is not None:
             self.icc_viewer.close()
+        if self.icc_inspector is not None:
+            self.icc_inspector.close()
         if self.shot1 is not None:
             self.shot1.close()
         if self.setting_diag is not None:
@@ -195,6 +205,7 @@ class App(QWidget):
         self.setting_opened=False
         self.setting_diag=None
         self.icc_viewer=None
+        self.icc_inspector=None
         # register hotkey
         self.register_hotkey([Qt.Key_Alt,Qt.Key_QuoteLeft],
                              self.getCustomColor,"Screen Pick")
@@ -465,6 +476,33 @@ class App(QWidget):
             self.icc_viewer.show()
         else:
             self.icc_viewer.activateWindow()
+
+    def open_icc_inspector(self):
+        """
+        打开ICC Inspector窗口
+        在当前窗口所在的显示器上居中显示，并保持独立移动能力
+        """
+        if self.icc_inspector is None or not self.icc_inspector.isVisible():
+            self.icc_inspector = ICCInspectorGUI()
+
+            # 获取当前显示器的可用几何区域
+            desktop = QApplication.desktop()
+            screen_number = desktop.screenNumber(self)
+            screen_geometry = desktop.availableGeometry(screen_number)
+
+            # 计算ICC Inspector窗口在当前显示器中的居中位置
+            inspector_geometry = self.icc_inspector.geometry()
+            x = screen_geometry.center().x() - inspector_geometry.width() // 2
+            y = screen_geometry.center().y() - inspector_geometry.height() // 2
+            inspector_geometry.moveTo(x, y)
+            self.icc_inspector.setGeometry(inspector_geometry)
+
+            def on_icc_inspector_closed():
+                self.icc_inspector = None
+            self.icc_inspector.destroyed.connect(on_icc_inspector_closed)
+            self.icc_inspector.show()
+        else:
+            self.icc_inspector.activateWindow()
     
     def set_Setting(self):
         loop = QEventLoop()
