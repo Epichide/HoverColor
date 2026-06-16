@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-ICC Inspector GUI - PyQt5 Version
+ICC Inspector GUI - PyQt5 Version.
+
+This module provides a desktop UI for importing ICC/JSON data and browsing
+profile header fields, tag metadata, and parsed tag payloads.
 """
 
 import os
@@ -13,14 +16,23 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QTableWidget, QTableWidgetItem, QTreeWidget, QTreeWidgetItem,
                              QLabel, QPushButton, QFileDialog, QMessageBox, QTabWidget,
                              QSplitter, QMenuBar, QMenu, QAction, QToolBar, QStatusBar,
-                             QHeaderView)
+                             QHeaderView, QActionGroup)
 from PyQt5.QtCore import Qt, QPoint
 from PyQt5.QtGui import QFont, QIcon, QColor
 import shutil
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from parse_binary import parse_icc_binary
+from icc_serialize import to_json_compatible
 from iccinspector_builtin import load_icc, save_icc, warp_file
+from icc_widget.copy_utils import install_copy_shortcut
+from icc_widget.gamut_widget import ICCGamutWidget
+from icc_widget.i18n import DEFAULT_LANGUAGE, tr
+from icc_widget.summary_widget import ICCSummaryWidget
+from icc_widget.table_utils import configure_content_fit_table, configure_copyable_tree, refit_table_columns
+
+
+METADATA_KEYS = {'offset', 'bytesize', 'datatype', 'datasize'}
 
 
 class ICCInspectorGUI(QMainWindow):
@@ -29,6 +41,7 @@ class ICCInspectorGUI(QMainWindow):
         self.current_file = None
         self.source_origin = None  # 'icc', 'image', 'json'
         self.parsed_data = None
+        self.language = DEFAULT_LANGUAGE
         self.init_ui()
         
     def init_ui(self):
@@ -45,16 +58,18 @@ class ICCInspectorGUI(QMainWindow):
         # Tab widget containing all views
         self.tab_widget = QTabWidget()
         main_layout.addWidget(self.tab_widget)
-        
-        # ===== Tab 1: Profile Info =====
+
+        # ===== Tab 1: ICC Summary =====
+        self.summary_widget = ICCSummaryWidget()
+        self.tab_widget.addTab(self.summary_widget, tr('tab.summary', self.language))
+
+        # ===== Tab 2: Profile Info =====
         profile_tab = QWidget()
         profile_layout = QVBoxLayout(profile_tab)
         profile_layout.setContentsMargins(0, 0, 0, 0)
         
         # Splitter between basic and header info (vertical, stretchable)
         splitter = QSplitter(Qt.Vertical)
-        splitter.setCollapsible(0, False)
-        splitter.setCollapsible(1, False)
         
         # Basic Info container (top panel in splitter)
         basic_container = QWidget()
@@ -63,22 +78,11 @@ class ICCInspectorGUI(QMainWindow):
         basic_container_layout.addWidget(QLabel('<b>Basic Info</b>'))
         self.basic_table = QTableWidget()
         self.basic_table.setColumnCount(2)
-        self.basic_table.setHorizontalHeaderLabels(['Item', 'Value'])
+        self.basic_table.setHorizontalHeaderLabels(tr('table.basic.headers', self.language))
         self.basic_table.verticalHeader().setVisible(False)
         self.basic_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.basic_table.setSelectionBehavior(QTableWidget.SelectRows)
-        # Add cell borders and fix selection colors
-        self.basic_table.setStyleSheet("""
-            QTableWidget { gridline-color: #cccccc; }
-            QTableWidget::item { border: 1px solid #e0e0e0; }
-            QTableWidget::item:selected { background-color: #0078d4; color: white; }
-        """)
-        
-        # Adjust table resize modes so columns are interactive and stretch
-        basic_h = self.basic_table.horizontalHeader()
-        for col in range(self.basic_table.columnCount()):
-            basic_h.setSectionResizeMode(col, QHeaderView.Interactive)
-        basic_h.setStretchLastSection(True)
+        install_copy_shortcut(self.basic_table)
+        configure_content_fit_table(self.basic_table, min_widths=[130, 180], max_widths=[260, 520])
         
         basic_container_layout.addWidget(self.basic_table)
         
@@ -89,27 +93,23 @@ class ICCInspectorGUI(QMainWindow):
         header_container_layout.addWidget(QLabel('<b>Header Info</b>'))
         self.header_table = QTableWidget()
         self.header_table.setColumnCount(6)
-        self.header_table.setHorizontalHeaderLabels(['Item', 'Value', 'Offset', 'Bytesize', 'Datatype', 'Datasize'])
+        self.header_table.setHorizontalHeaderLabels(tr('table.detail.headers', self.language))
         self.header_table.verticalHeader().setVisible(False)
         self.header_table.setEditTriggers(QTableWidget.NoEditTriggers)
-        self.header_table.setSelectionBehavior(QTableWidget.SelectRows)
-        # Add cell borders and fix selection colors
-        self.header_table.setStyleSheet("""
-            QTableWidget { gridline-color: #cccccc; }
-            QTableWidget::item { border: 1px solid #e0e0e0; }
-            QTableWidget::item:selected { background-color: #0078d4; color: white; }
-        """)
-        
-        header_h = self.header_table.horizontalHeader()
-        for col in range(self.header_table.columnCount()):
-            header_h.setSectionResizeMode(col, QHeaderView.Interactive)
-        header_h.setStretchLastSection(True)
+        install_copy_shortcut(self.header_table)
+        configure_content_fit_table(
+            self.header_table,
+            min_widths=[130, 180, 70, 90, 100, 80],
+            max_widths=[260, 420, 110, 130, 180, 120],
+        )
         
         header_container_layout.addWidget(self.header_table)
         
         # Add both containers to splitter
         splitter.addWidget(basic_container)
         splitter.addWidget(header_container)
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
         # Set initial sizes: prefer showing basic info (smaller initially)
         splitter.setSizes([200, 400])
         
@@ -117,7 +117,7 @@ class ICCInspectorGUI(QMainWindow):
         
         self.tab_widget.addTab(profile_tab, 'Profile Info')
         
-        # ===== Tab 2: Tags & Tag Details (combined with horizontal splitter) =====
+        # ===== Tab 3: Tags & Tag Details (combined with horizontal splitter) =====
         tag_combined_tab = QWidget()
         tag_combined_layout = QHBoxLayout(tag_combined_tab)
         tag_combined_layout.setContentsMargins(0, 0, 0, 0)
@@ -128,14 +128,10 @@ class ICCInspectorGUI(QMainWindow):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.addWidget(QLabel('<b>Tags</b>'))
         self.tag_tree = QTreeWidget()
-        self.tag_tree.setHeaderLabel('Tag Name')
+        self.tag_tree.setHeaderLabel(tr('table.tag_name.header', self.language))
         self.tag_tree.itemClicked.connect(self.on_tag_select)
-        # Add border to tag tree and fix selection colors
-        self.tag_tree.setStyleSheet("""
-            QTreeWidget { gridline-color: #cccccc; }
-            QTreeWidget::item { border: 1px solid #e0e0e0; }
-            QTreeWidget::item:selected { background-color: #0078d4; color: white; }
-        """)
+        configure_copyable_tree(self.tag_tree, select_items=False)
+        install_copy_shortcut(self.tag_tree)
         left_layout.addWidget(self.tag_tree)
         
         # Right panel: Tag details
@@ -147,15 +143,11 @@ class ICCInspectorGUI(QMainWindow):
         
         # Tag tree with expandable nodes (Item, Value, Offset, Bytesize, Datatype, Datasize)
         self.tag_tree_view = QTreeWidget()
-        self.tag_tree_view.setHeaderLabels(['Item', 'Value', 'Offset', 'Bytesize', 'Datatype', 'Datasize'])
+        self.tag_tree_view.setHeaderLabels(tr('table.detail.headers', self.language))
         self.tag_tree_view.setColumnWidth(0, 300)
         self.tag_tree_view.setAlternatingRowColors(True)
-        # Add cell borders and fix selection colors
-        self.tag_tree_view.setStyleSheet("""
-            QTreeWidget { gridline-color: #cccccc; }
-            QTreeWidget::item { border: 1px solid #e0e0e0; }
-            QTreeWidget::item:selected { background-color: #0078d4; color: white; }
-        """)
+        configure_copyable_tree(self.tag_tree_view, select_items=True)
+        install_copy_shortcut(self.tag_tree_view)
         # Make columns interactive (user can resize) and stretch last section to fill visible widget width
         for c in range(6):
             self.tag_tree_view.header().setSectionResizeMode(c, QHeaderView.Interactive)
@@ -164,14 +156,18 @@ class ICCInspectorGUI(QMainWindow):
         
         # Horizontal splitter between left (tags) and right (details)
         h_splitter = QSplitter(Qt.Horizontal)
-        h_splitter.setCollapsible(0, False)
-        h_splitter.setCollapsible(1, False)
         h_splitter.addWidget(left_panel)
         h_splitter.addWidget(right_panel)
+        h_splitter.setCollapsible(0, False)
+        h_splitter.setCollapsible(1, False)
         h_splitter.setSizes([250, 650])  # Prefer more space for details
         
         tag_combined_layout.addWidget(h_splitter)
         self.tab_widget.addTab(tag_combined_tab, 'Tags & Details')
+
+        # ===== Tab 4: Gamut =====
+        self.gamut_widget = ICCGamutWidget()
+        self.tab_widget.addTab(self.gamut_widget, tr('tab.gamut', self.language))
         
         main_layout.addWidget(self.tab_widget)
         
@@ -186,6 +182,60 @@ class ICCInspectorGUI(QMainWindow):
         self.status_bar.showMessage('Ready')
         # Create menu bar after status bar so status label exists for actions
         self.create_menu_bar()
+        self.load_stylesheet()
+
+    def load_stylesheet(self):
+        """Load ICC Inspector stylesheet from the local resource/css directory."""
+        css_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resource', 'css', 'icc_inspector.css')
+        if not os.path.exists(css_path):
+            return
+        with open(css_path, 'r', encoding='utf-8') as css_file:
+            style = css_file.read()
+
+        font_sizes = self._get_adaptive_font_sizes()
+        for name, value in font_sizes.items():
+            style = style.replace(f"__{name}__", str(value))
+        self.setStyleSheet(style)
+
+        # Force tab/menu fonts via setFont so the new sizes actually apply
+        # even on platforms where QSS font-size on QMenuBar is ignored.
+        tab_font = QFont()
+        tab_font.setPointSizeF(float(font_sizes['TAB_FONT_PT']))
+        self.menuBar().setFont(tab_font)
+        for menu in self.menuBar().findChildren(QMenu):
+            menu.setFont(tab_font)
+        for tabs in self.findChildren(QTabWidget):
+            tabs.tabBar().setFont(tab_font)
+        self.statusBar().setFont(tab_font)
+        print(
+            "ICC_INSPECTOR_FONT_SIZES:",
+            f"base={font_sizes['BASE_FONT_PT']}pt",
+            f"tab={font_sizes['TAB_FONT_PT']}pt",
+            f"body={font_sizes['BODY_FONT_PT']}pt",
+            f"table={font_sizes['TABLE_FONT_PT']}pt",
+            f"title={font_sizes['TITLE_FONT_PT']}pt",
+        )
+
+    def _get_adaptive_font_sizes(self):
+        """Return UI font sizes derived from the current Qt application font."""
+        base_font = QApplication.font()
+        base_pt = base_font.pointSizeF()
+        if base_pt <= 0:
+            base_pt = 9.0
+
+        # Keep tabs compact, while making content/table slightly more readable.
+        tab_pt = max(8.0, min(base_pt - 1.0, 9.0))
+        body_pt = max(9.5, min(base_pt + 0.5, 11.0))
+        table_pt = max(9.5, min(base_pt + 1.0, 11.5))
+        title_pt = max(11.0, min(body_pt + 1.5, 13.5))
+
+        return {
+            "BASE_FONT_PT": round(base_pt, 1),
+            "TAB_FONT_PT": round(tab_pt, 1),
+            "BODY_FONT_PT": round(body_pt, 1),
+            "TABLE_FONT_PT": round(table_pt, 1),
+            "TITLE_FONT_PT": round(title_pt, 1),
+        }
         
     def create_menu_bar(self):
         menubar = self.menuBar()
@@ -214,6 +264,10 @@ class ICCInspectorGUI(QMainWindow):
         export_json_action.setShortcut('Ctrl+S')
         export_json_action.triggered.connect(self.export_json)
         export_menu.addAction(export_json_action)
+
+        export_excel_action = QAction('Export Excel...', self)
+        export_excel_action.triggered.connect(self.export_excel)
+        export_menu.addAction(export_excel_action)
         
         export_icc_action = QAction('Export ICC...', self)
         export_icc_action.triggered.connect(self.export_icc)
@@ -226,11 +280,53 @@ class ICCInspectorGUI(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
+        # Language menu switches selected user-facing table and tab text.
+        self.language_menu = menubar.addMenu(tr('language.menu', self.language))
+        self.language_action_group = QActionGroup(self)
+        self.language_action_group.setExclusive(True)
+
+        self.english_action = QAction(tr('language.english', self.language), self, checkable=True)
+        self.english_action.setData('en')
+        self.english_action.setChecked(self.language == 'en')
+        self.english_action.triggered.connect(lambda checked=False: self.set_language('en'))
+        self.language_action_group.addAction(self.english_action)
+        self.language_menu.addAction(self.english_action)
+
+        self.chinese_action = QAction(tr('language.chinese', self.language), self, checkable=True)
+        self.chinese_action.setData('zh')
+        self.chinese_action.setChecked(self.language == 'zh')
+        self.chinese_action.triggered.connect(lambda checked=False: self.set_language('zh'))
+        self.language_action_group.addAction(self.chinese_action)
+        self.language_menu.addAction(self.chinese_action)
+
         # Help menu
         help_menu = menubar.addMenu('Help')
         about_action = QAction('About', self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
+
+    def set_language(self, language):
+        """Switch bilingual text for selected ICC inspector UI parts."""
+        self.language = language
+        self.tab_widget.setTabText(0, tr('tab.summary', self.language))
+        self.tab_widget.setTabText(3, tr('tab.gamut', self.language))
+        self.summary_widget.set_language(self.language)
+        self.gamut_widget.set_language(self.language)
+        self.retranslate_table_headers()
+        self.language_menu.setTitle(tr('language.menu', self.language))
+        self.english_action.setText(tr('language.english', self.language))
+        self.chinese_action.setText(tr('language.chinese', self.language))
+        self.english_action.setChecked(self.language == 'en')
+        self.chinese_action.setChecked(self.language == 'zh')
+
+    def retranslate_table_headers(self):
+        """Refresh table/tree column names that are allowed to switch language."""
+        self.basic_table.setHorizontalHeaderLabels(tr('table.basic.headers', self.language))
+        self.header_table.setHorizontalHeaderLabels(tr('table.detail.headers', self.language))
+        self.tag_tree.setHeaderLabel(tr('table.tag_name.header', self.language))
+        self.tag_tree_view.setHeaderLabels(tr('table.detail.headers', self.language))
+        refit_table_columns(self.basic_table)
+        refit_table_columns(self.header_table)
         
     def open_file(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -256,7 +352,7 @@ class ICCInspectorGUI(QMainWindow):
             self.basic_table.insertRow(row)
             self.basic_table.setItem(row, 0, QTableWidgetItem(name))
             self.basic_table.setItem(row, 1, QTableWidgetItem(str(value)))
-        self.basic_table.resizeColumnToContents(0)
+        refit_table_columns(self.basic_table)
         
         # Header info - display list format: [value, offset, bytesize, datatype, datasize]
         self.header_table.setRowCount(0)
@@ -286,17 +382,21 @@ class ICCInspectorGUI(QMainWindow):
                     self.header_table.setItem(row, 4, QTableWidgetItem(str(datatype)))
                     self.header_table.setItem(row, 5, QTableWidgetItem(str(datasize)))
         
-        self.header_table.resizeColumnsToContents()
+        refit_table_columns(self.header_table)
         
     def load_tag_list(self):
         self.tag_tree.clear()
         tags = self.parsed_data.get('tags', {})
         for tag_name in sorted(tags.keys()):
-            item = QTreeWidgetItem(self.tag_tree, [tag_name])
+            tag_meta = tags.get(tag_name, {})
+            tag_type = tag_meta.get('type') if isinstance(tag_meta, dict) else None
+            label = f"{tag_name} ({tag_type})" if tag_type else tag_name
+            item = QTreeWidgetItem(self.tag_tree, [label])
+            item.setData(0, Qt.UserRole, tag_name)
             self.tag_tree.addTopLevelItem(item)
             
     def on_tag_select(self, item, column):
-        tag_name = item.text(0)
+        tag_name = item.data(0, Qt.UserRole) or item.text(0)
         tag_data = self.parsed_data.get('tag_data', {}).get(tag_name, {})
         tag_meta = self.parsed_data.get('tags', {}).get(tag_name, {})
 
@@ -306,30 +406,36 @@ class ICCInspectorGUI(QMainWindow):
         self.tag_tree_view.clear()
 
         # Summary row: show tag as a single row with metadata in columns
-        offset = tag_meta.get('offset') if tag_meta else None
-        size = tag_meta.get('size') if tag_meta else None
-        dtype = tag_meta.get('type') if tag_meta else None
+        tag_payload_meta = tag_data if isinstance(tag_data, dict) else {}
 
-        # Try to infer datasize from parsed value
-        datasize = ''
-        if isinstance(tag_data, dict):
-            if 'values' in tag_data and isinstance(tag_data['values'], list):
-                datasize = str(len(tag_data['values']))
-            elif 'records' in tag_data and isinstance(tag_data['records'], list):
-                datasize = str(len(tag_data['records']))
-            elif 'value' in tag_data and isinstance(tag_data['value'], list):
-                datasize = str(len(tag_data['value']))
+        offset = tag_payload_meta.get('offset')
+        if offset is None:
+            offset = _field_value(tag_meta.get('data_offset')) if tag_meta else None
+        if offset is None:
+            offset = tag_meta.get('offset') if tag_meta else None
+
+        size = tag_payload_meta.get('bytesize')
+        if size is None:
+            size = _field_value(tag_meta.get('data_size')) if tag_meta else None
+        if size is None:
+            size = tag_meta.get('size') if tag_meta else None
+
+        dtype = tag_payload_meta.get('datatype')
+        if dtype is None:
+            dtype = tag_meta.get('type') if tag_meta else None
+
+        datasize = tag_payload_meta.get('datasize', '')
 
         summary_cols = [
             tag_name,
             '',
-            str(offset) if offset is not None else '',
-            str(size) if size is not None else '',
-            str(dtype) if dtype is not None else '',
-            datasize
+            _format_optional(offset),
+            _format_optional(size),
+            _format_optional(dtype),
+            _format_optional(datasize)
         ]
 
-        summary = QTreeWidgetItem(self.tag_tree_view, summary_cols)
+        summary = QTreeWidgetItem(self.tag_tree_view, _tree_cols(summary_cols))
 
         # Then add parsed value as child rows under the summary
         self._fill_tag_tree(summary, tag_data, 'value')
@@ -339,20 +445,43 @@ class ICCInspectorGUI(QMainWindow):
         
     def _fill_tag_tree(self, parent, data, key_name=''):
         """递归填充树形结构"""
+        if _is_parsed_field(data):
+            values = [
+                key_name,
+                _format_display_value(data.get('value')),
+                _format_optional(data.get('offset')),
+                _format_optional(data.get('bytesize')),
+                _format_optional(data.get('datatype')),
+                _format_optional(data.get('datasize')),
+            ]
+            if parent is None:
+                QTreeWidgetItem(self.tag_tree_view, _tree_cols(values))
+            else:
+                QTreeWidgetItem(parent, _tree_cols(values))
+            return
+
         # If data is a dict, show each key as a row with columns
         if isinstance(data, dict):
-            for k, v in data.items():
+            # Container-level metadata is shown in the row columns, not repeated as children.
+            display_items = ((k, v) for k, v in data.items() if k not in METADATA_KEYS)
+            for k, v in display_items:
                 # Create row with Item and Value; other columns empty by default
                 if parent is None:
-                    row = QTreeWidgetItem(self.tag_tree_view, [str(k), '' , '', '', '', ''])
+                    row = QTreeWidgetItem(self.tag_tree_view, _tree_cols([k, '' , '', '', '', '']))
                 else:
-                    row = QTreeWidgetItem(parent, [str(k), '' , '', '', '', ''])
+                    row = QTreeWidgetItem(parent, _tree_cols([k, '' , '', '', '', '']))
 
                 # If value is simple, put into Value column; if complex, show metadata in columns and recurse
-                if isinstance(v, (str, int, float)):
+                if _is_parsed_field(v):
+                    row.setText(1, _format_display_value(v.get('value')))
+                    row.setText(2, _format_optional(v.get('offset')))
+                    row.setText(3, _format_optional(v.get('bytesize')))
+                    row.setText(4, _format_optional(v.get('datatype')))
+                    row.setText(5, _format_optional(v.get('datasize')))
+                elif isinstance(v, (str, int, float, bool)) or v is None:
                     row.setText(1, str(v))
                 elif isinstance(v, list) and all(isinstance(x, (int, float, str)) for x in v):
-                    row.setText(1, '[' + ', '.join(str(x) for x in v) + ']')
+                    row.setText(1, _format_display_value(v))
                 elif isinstance(v, dict):
                     # If dict contains metadata keys, extract them into columns
                     offset = v.get('offset')
@@ -369,7 +498,7 @@ class ICCInspectorGUI(QMainWindow):
                         row.setText(5, str(datasize))
 
                     # Recurse on dict contents but skip metadata keys so they don't appear as separate child rows
-                    child_copy = {k: vv for k, vv in v.items() if k not in ('offset', 'bytesize', 'datatype', 'datasize')}
+                    child_copy = {k: vv for k, vv in v.items() if k not in METADATA_KEYS}
                     if child_copy:
                         self._fill_tag_tree(row, child_copy, '')
                 else:
@@ -381,21 +510,22 @@ class ICCInspectorGUI(QMainWindow):
             return
         elif isinstance(data, list):
             if all(isinstance(item, (int, float, str)) for item in data):
-                values_str = ', '.join(str(v) for v in data)
+                values_str = _format_display_value(data)
                 if parent is None:
-                    QTreeWidgetItem(self.tag_tree_view, [key_name, f'[{values_str}]', '', '', '', ''])
+                    QTreeWidgetItem(self.tag_tree_view, _tree_cols([key_name, values_str, '', '', '', '']))
                 else:
-                    QTreeWidgetItem(parent, [key_name, f'[{values_str}]', '', '', '', ''])
+                    QTreeWidgetItem(parent, _tree_cols([key_name, values_str, '', '', '', '']))
             else:
-                node = QTreeWidgetItem(parent, [key_name + f' [{len(data)} items]', '', '', '', '']) if parent else QTreeWidgetItem(self.tag_tree_view, [key_name + f' [{len(data)} items]', '', '', '', ''])
+                cols = _tree_cols([key_name + f' [{len(data)} items]', '', '', '', ''])
+                node = QTreeWidgetItem(parent, cols) if parent else QTreeWidgetItem(self.tag_tree_view, cols)
                 for i, item in enumerate(data):
                     self._fill_tag_tree(node, item, f'[{i}]')
         else:
             # Simple value
             if parent is None:
-                QTreeWidgetItem(self.tag_tree_view, [key_name, str(data), '', '', '', ''])
+                QTreeWidgetItem(self.tag_tree_view, _tree_cols([key_name, data, '', '', '', '']))
             else:
-                QTreeWidgetItem(parent, [key_name, str(data), '', '', '', ''])
+                QTreeWidgetItem(parent, _tree_cols([key_name, data, '', '', '', '']))
             
     def export_json(self):
         if not self.parsed_data:
@@ -414,13 +544,37 @@ class ICCInspectorGUI(QMainWindow):
             return
             
         try:
-            export_data = _convert_for_json(self.parsed_data)
+            export_data = to_json_compatible(self.parsed_data)
             export_data['export_time'] = datetime.now().isoformat()
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(export_data, f, indent=2, ensure_ascii=False)
             QMessageBox.information(self, 'Success', f'Exported to:\n{file_path}')
         except Exception as e:
             QMessageBox.critical(self, 'Error', f'Export failed:\n{str(e)}')
+
+    def export_excel(self):
+        """Export parsed ICC data to a multi-sheet Excel workbook."""
+        if not self.parsed_data:
+            QMessageBox.warning(self, 'Warning', 'Please import a profile first')
+            return
+
+        icc_name = os.path.splitext(os.path.basename(self.current_file))[0] if self.current_file else 'profile'
+        default_name = icc_name + '_parsed.xlsx'
+
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, 'Export Excel', default_name, 'Excel Files (*.xlsx)'
+        )
+
+        if not file_path:
+            return
+
+        try:
+            from icc_export_excel import export_to_excel
+
+            export_to_excel(self.parsed_data, file_path)
+            QMessageBox.information(self, 'Success', f'Exported Excel to:\n{file_path}')
+        except Exception as e:
+            QMessageBox.critical(self, 'Error', f'Excel export failed:\n{str(e)}')
 
     def export_icc(self):
         """Export ICC file. Only supported when source was ICC or image import."""
@@ -479,7 +633,9 @@ class ICCInspectorGUI(QMainWindow):
                 self.parsed_data = json.load(f)
             self.current_file = file_path
             self.source_origin = 'json'
-            
+
+            self.summary_widget.set_profile_data(self.parsed_data)
+            self.gamut_widget.set_profile_data(self.parsed_data)
             self.load_profile_info()
             self.load_tag_list()
             # update left status label with current imported file
@@ -562,12 +718,14 @@ class ICCInspectorGUI(QMainWindow):
             os.makedirs(temp_dir, exist_ok=True)
             icc_name = os.path.splitext(os.path.basename(file_path))[0]
             json_path = os.path.join(temp_dir, icc_name + '_parsed.json')
-            export_data = _convert_for_json(self.parsed_data)
+            export_data = to_json_compatible(self.parsed_data)
             export_data['export_time'] = datetime.now().isoformat()
             with open(json_path, 'w', encoding='utf-8') as f:
                 json.dump(export_data, f, indent=2, ensure_ascii=False)
             print('JSON auto-saved to:', json_path)
-            
+
+            self.summary_widget.set_profile_data(self.parsed_data)
+            self.gamut_widget.set_profile_data(self.parsed_data)
             self.load_profile_info()
             self.load_tag_list()
             
@@ -626,16 +784,50 @@ class ICCInspectorGUI(QMainWindow):
         return intents.get(code, f'Unknown ({code})')
 
 
-def _convert_for_json(obj):
-    """递归转换对象中的 bytes 类型为可序列化格式"""
-    if isinstance(obj, bytes):
-        return obj.hex()
-    elif isinstance(obj, dict):
-        return {k: _convert_for_json(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [_convert_for_json(item) for item in obj]
+def _is_parsed_field(value):
+    """判断是否为单个解析字段包装: {value, offset, bytesize, datatype, datasize}。"""
+    if not isinstance(value, dict):
+        return False
+
+    required_keys = {"value", "offset", "bytesize", "datatype"}
+    allowed_keys = required_keys | {"datasize"}
+    return required_keys.issubset(value.keys()) and set(value.keys()).issubset(allowed_keys)
+
+
+def _field_value(value, default=None):
+    """兼容裸值和 ParsedField 结构，取出实际 value。"""
+    if _is_parsed_field(value):
+        return value.get("value", default)
+    return value if value is not None else default
+
+
+def _format_optional(value):
+    """格式化可为空的表格单元格。"""
+    return "" if value is None else str(value)
+
+
+def _tree_cols(values):
+    """QTreeWidgetItem 要求每一列都是字符串。"""
+    return [_format_display_value(value) if isinstance(value, (list, dict)) else _format_optional(value)
+            for value in values]
+
+
+def _format_display_value(value, max_items=12, max_chars=240):
+    """格式化树形表格中的值，长数组只显示摘要，避免 GUI 卡顿。"""
+    if isinstance(value, list):
+        preview = ", ".join(str(item) for item in value[:max_items])
+        if len(value) > max_items:
+            preview = f"{preview}, ... ({len(value)} items)"
+        return f"[{preview}]"
+
+    if isinstance(value, dict):
+        text = json.dumps(value, ensure_ascii=False)
     else:
-        return obj
+        text = str(value)
+
+    if len(text) > max_chars:
+        return text[:max_chars] + f"... ({len(text)} chars)"
+    return text
 
 
 if __name__ == '__main__':

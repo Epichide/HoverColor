@@ -20,11 +20,11 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 
-from ..color_utils.iccinspector import iccProfile
-from ..color_utils.icc_extend import update_custom_icc_cache_proj,load_custom_icc
+from ..color_utils.icc_parse.iccinspector import iccProfile
+from ..color_utils.icc_parse.icc_extend import update_custom_icc_cache_proj,load_custom_icc
 from ..color_utils.color_utils import *
 from ..utils.file_utils import _get_file, get_basename, remove_keys
-from ..color_utils.iccinspector_builtin import load_icc, save_icc, warp_file
+from ..color_utils.icc_parse.iccinspector_builtin import load_icc, save_icc, warp_file
 from .basewid_utils import ScrollSubTab
 
 # 设置 matplotlib 支持中文显示

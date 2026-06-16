@@ -1,7 +1,7 @@
 import os
 try:
     from .iccinspector import iccProfile,get_plot_xy
-    from .color_utils import *
+    from ..color_utils import *
     from .iccinspector_builtin import load_icc, save_icc, show_icc, show_result, warp_file
 except:
     from iccinspector import iccProfile,get_plot_xy

@@ -2,7 +2,7 @@
 
 import struct
 from dataclasses import dataclass
-from typing import Tuple, List, Optional
+from typing import Any, Tuple, List, Optional, Union
 from datetime import datetime
 
 
@@ -16,14 +16,37 @@ UINT64 = struct.Struct(">Q")         # 8字节无符号
 INT32 = struct.Struct(">i")          # 4字节有符号
 
 # 定点数类型
-# u8Fixed8: 8.8定点数 (1字节整数 + 8位小数)
-U8FIXED8 = struct.Struct(">B")       # 存储时只有整数，解析时除以256
+# u8Fixed8: 8.8定点数 (规范4.9: 16位量, 8位小数, 1.0=0100h)，解析时除以256
+U8FIXED8 = struct.Struct(">H")       # 存储为16位无符号整数，解析时除以256
 
 # s15Fixed16: 15.16定点数 (1字节整数 + 16位小数)
 S15FIXED16 = struct.Struct(">i")     # 存储时是有符号32位整数，解析时除以65536
 
 # u1Fixed15: 1.15定点数 (用于介素)
 U1FIXED15 = struct.Struct(">H")      # 存储时是16位，解析时除以32768
+
+
+# Header 字段元信息：名称 -> (偏移量, 字节数, 基础数据类型, 数据数量)
+ICC_HEADER_FIELDS = {
+    "profile_size": (0, 4, "uint32", 4),
+    "preferred_cmm": (4, 4, "signature", 4),
+    "version": (8, 4, "uint32", 4),
+    "device_class": (12, 4, "signature", 4),
+    "color_space": (16, 4, "signature", 4),
+    "pcs": (20, 4, "signature", 4),
+    "datetime": (24, 12, "uint16[6]", 6),
+    "signature": (36, 4, "signature", 4),
+    "primary_platform": (40, 4, "signature", 4),
+    "flags": (44, 4, "uint32", 4),
+    "device_manufacturer": (48, 4, "signature", 4),
+    "device_model": (52, 4, "signature", 4),
+    "device_attributes": (56, 8, "uint64", 8),
+    "rendering_intent": (64, 4, "uint32", 4),
+    "illuminant_xyz": (68, 12, "s15Fixed16[3]", 3),
+    "creator": (80, 4, "signature", 4),
+    "profile_id": (84, 16, "bytes", 16),
+    "reserved": (100, 28, "bytes", 28),
+}
 
 
 # ==================== 复合类型定义 ====================
@@ -55,8 +78,8 @@ class ICCTypes:
     
     @staticmethod
     def unpack_u8fixed8(data: bytes) -> float:
-        """解析u8Fixed8定点数 (8.8格式)"""
-        raw = UINT8.unpack(data[0:1])[0]
+        """解析u8Fixed8定点数 (规范4.9: 16位量, 8位小数)"""
+        raw = U8FIXED8.unpack(data[0:2])[0]
         return raw / 256.0
     
     @staticmethod
@@ -127,7 +150,8 @@ class ICCHeader:
     rendering_intent: int       # 4字节 uint32
     illuminant_xyz: Tuple[float, float, float]  # XYZNumber
     creator: str                # 4字节 signature
-    _reserved: bytes            # 44字节保留
+    profile_id: bytes           # 16字节 profile ID (MD5), 偏移84-99
+    _reserved: bytes            # 28字节保留, 偏移100-127
     
     @classmethod
     def from_bytes(cls, data: bytes) -> "ICCHeader":
@@ -150,7 +174,8 @@ class ICCHeader:
             rendering_intent=t.unpack_uint32(data[64:68]),
             illuminant_xyz=t.unpack_xyz(data[68:80]),
             creator=t.unpack_signature(data[80:84]),
-            _reserved=data[84:128],
+            profile_id=data[84:100],
+            _reserved=data[100:128],
         )
 
 
@@ -178,35 +203,52 @@ class TagTableEntry:
 
 @dataclass
 class XYZType:
-    """XYZ Type (12字节数据部分)"""
+    """XYZ Type - 规范 10.31 / Table 84
+
+    数据部分为 XYZNumber 数组 (每组12字节)。大多数 tag 只含1组。
+    value 保留第一组以兼容旧 Python 调用; JSON 导出只保留 values，避免重复。
+    """
     type_signature: str           # 'XYZ '
     reserved: bytes               # 4字节保留
-    value: Tuple[float, float, float]  # XYZNumber
-    
+    value: Tuple[float, float, float]       # 第一组 XYZNumber
+    values: List[Tuple[float, float, float]]  # 全部 XYZNumber
+
     @classmethod
     def from_bytes(cls, data: bytes) -> "XYZType":
         t = ICCTypes
+        count = max(0, (len(data) - 8) // 12)
+        values = [t.unpack_xyz(data[8 + i*12:20 + i*12]) for i in range(count)]
         return cls(
             type_signature=t.unpack_signature(data[0:4]),
             reserved=data[4:8],
-            value=t.unpack_xyz(data[8:20]),
+            value=values[0] if values else (0.0, 0.0, 0.0),
+            values=values,
         )
 
 
 @dataclass
 class ColorantEntry:
-    """Colorant Table Entry (32字节)"""
-    name: str           # 32字节 (前32字节是 colorant name, null-terminated ASCII)
-    
+    """Colorant Table Entry (38字节 = 32字节名字 + uInt16Number[3] PCS值)
+
+    规范 10.5 / Table 34。PCS 值为相对比色，按 uInt16Number 编码。
+    """
+    name: str               # 32字节, null-terminated 7-bit ASCII
+    pcs: Tuple[int, int, int]  # 3个 uInt16Number (PCSXYZ 或 PCSLAB)
+
     @classmethod
     def from_bytes(cls, data: bytes) -> "ColorantEntry":
         name = data[0:32].decode("ascii", errors="replace").split("\x00")[0]
-        return cls(name=name)
+        pcs = (
+            UINT16.unpack(data[32:34])[0],
+            UINT16.unpack(data[34:36])[0],
+            UINT16.unpack(data[36:38])[0],
+        )
+        return cls(name=name, pcs=pcs)
 
 
 @dataclass 
 class ColorantTableType:
-    """Colorant Table Type"""
+    """Colorant Table Type - 规范 10.5 / Table 34"""
     type_signature: str
     reserved: bytes
     count: int
@@ -218,7 +260,7 @@ class ColorantTableType:
         count = t.unpack_uint32(data[8:12])
         entries = []
         for i in range(count):
-            entry_data = data[12 + i*32:12 + (i+1)*32]
+            entry_data = data[12 + i*38:12 + (i+1)*38]
             entries.append(ColorantEntry.from_bytes(entry_data))
         return cls(
             type_signature=t.unpack_signature(data[0:4]),
@@ -230,29 +272,41 @@ class ColorantTableType:
 
 @dataclass
 class CurveType:
-    """Curve Type (可变长度)"""
+    """Curve Type (可变长度) - 规范 10.6 / Table 35
+
+    count==0: identity 响应（无后续数据）
+    count==1: 1个 u8Fixed8Number (2字节) gamma 值
+    count>1 : count 个 uint16 曲线点 (÷65535)
+    """
     type_signature: str
     reserved: bytes
     count: int
-    curve_data: List[float]  # 如果count=0则是gamma值，否则是曲线点
-    
+    curve_data: List[float]  # count==0 时为空; count==1 时为[gamma]; 否则为曲线点
+
     @classmethod
     def from_bytes(cls, data: bytes) -> "CurveType":
         t = ICCTypes
         count = t.unpack_uint32(data[8:12])
-        
+
         if count == 0:
-            # count=0: 接下来4字节是gamma值 (u8Fixed8)
-            gamma_raw = t.unpack_uint32(data[12:16])
-            gamma = gamma_raw / 256.0
+            # identity 响应，无曲线数据
             return cls(
                 type_signature=t.unpack_signature(data[0:4]),
                 reserved=data[4:8],
                 count=0,
-                curve_data=[gamma],  # gamma值放在列表第一项
+                curve_data=[],
+            )
+        elif count == 1:
+            # 1个 u8Fixed8Number (2字节) 作为 gamma 值
+            gamma = t.unpack_u8fixed8(data[12:14])
+            return cls(
+                type_signature=t.unpack_signature(data[0:4]),
+                reserved=data[4:8],
+                count=1,
+                curve_data=[gamma],
             )
         else:
-            # count>0: count个uint16曲线点
+            # count>1: count个uint16曲线点 (÷65535)
             points = []
             for i in range(count):
                 val_raw = UINT16.unpack(data[12 + i*2:12 + i*2 + 2])[0]
@@ -274,13 +328,13 @@ class ParametricCurveType:
     reserved2: bytes         # uint16
     parameters: List[float]  # s15Fixed16 数组，参数个数取决于 function_type
     
-    # function_type 对应的参数个数
+    # function_type 对应的参数个数 (规范 Table 68)
     PARAMETER_COUNTS = {
-        0: 1,  # Y = X^n
-        1: 3,  # Y = (aX + b)^n
-        2: 4,  # Y = (aX + b)^n + c
-        3: 5,  # Y = (aX + b)^n + c (扩展)
-        4: 6,  # Y = (aX + b)^n + c (扩展)
+        0: 1,  # Y = X^g                       参数: g
+        1: 3,  # Y = (aX + b)^g                 参数: g a b
+        2: 4,  # Y = (aX + b)^g + c             参数: g a b c
+        3: 5,  # 分段: (aX+b)^g / cX            参数: g a b c d
+        4: 7,  # 分段含偏移                     参数: g a b c d e f
     }
     
     @classmethod
@@ -322,16 +376,96 @@ class TextType:
 
 
 @dataclass
-class MultiLocalizedUnicodeType:
-    """Multi-Localized Unicode Type (mluc)"""
+class TextDescriptionType:
+    """Text Description Type (desc) - ICC v2 legacy profile description.
+
+    The structure contains an ASCII description, followed by optional Unicode
+    and ScriptCode descriptions. ICC v4 profiles usually use mluc instead.
+    """
     type_signature: str
     reserved: bytes
-    count: int              # 记录数
-    record_size: int        # 每条记录字节数
-    records: List[dict]     # [{lang_code, country_code, text}, ...]
+    ascii_count: int
+    ascii_description: str
+    unicode_language_code: int
+    unicode_count: int
+    unicode_description: str
+    script_code_code: int
+    script_code_count: int
+    script_code_description: str
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> "TextDescriptionType":
+        t = ICCTypes
+        ascii_count = t.unpack_uint32(data[8:12]) if len(data) >= 12 else 0
+        ascii_start = 12
+        ascii_end = min(len(data), ascii_start + ascii_count)
+        ascii_raw = data[ascii_start:ascii_end]
+        ascii_description = ascii_raw.split(b"\x00")[0].decode("ascii", errors="replace")
+
+        unicode_language_offset = ascii_end
+        unicode_count_offset = unicode_language_offset + 4
+        unicode_text_offset = unicode_count_offset + 4
+        unicode_language_code = t.unpack_uint32(data[unicode_language_offset:unicode_language_offset + 4]) if len(data) >= unicode_language_offset + 4 else 0
+        unicode_count = t.unpack_uint32(data[unicode_count_offset:unicode_count_offset + 4]) if len(data) >= unicode_count_offset + 4 else 0
+        unicode_bytesize = unicode_count * 2
+        unicode_raw = data[unicode_text_offset:unicode_text_offset + unicode_bytesize]
+        unicode_description = unicode_raw.decode("utf-16-be", errors="replace").split("\x00")[0] if unicode_raw else ""
+
+        script_code_offset = unicode_text_offset + unicode_bytesize
+        script_count_offset = script_code_offset + 2
+        script_text_offset = script_count_offset + 1
+        script_code_code = t.unpack_uint16(data[script_code_offset:script_code_offset + 2]) if len(data) >= script_code_offset + 2 else 0
+        script_code_count = t.unpack_uint8(data[script_count_offset:script_count_offset + 1]) if len(data) >= script_count_offset + 1 else 0
+        script_raw = data[script_text_offset:script_text_offset + min(script_code_count, 67)]
+        script_code_description = script_raw.split(b"\x00")[0].decode("mac_roman", errors="replace") if script_raw else ""
+
+        return cls(
+            type_signature=t.unpack_signature(data[0:4]),
+            reserved=data[4:8],
+            ascii_count=ascii_count,
+            ascii_description=ascii_description,
+            unicode_language_code=unicode_language_code,
+            unicode_count=unicode_count,
+            unicode_description=unicode_description,
+            script_code_code=script_code_code,
+            script_code_count=script_code_count,
+            script_code_description=script_code_description,
+        )
+
+
+@dataclass
+class ParsedField:
+    """带字节位置元信息的已解析字段。"""
+    value: Any
+    offset: int
+    bytesize: int
+    datatype: str
+    datasize: int
+
+
+@dataclass
+class MultiLocalizedUnicodeRecord:
+    """mluc 记录项 - 规范 10.13
+
+    每条记录描述一段本地化文本的位置与语言信息。文本内容位于 mluc
+    数据块内的独立字符串区域，text_offset 是相对 mluc type 起点的偏移。
+    """
+    language_code: ParsedField  # 2字节语言代码，如 "en"
+    country_code: ParsedField   # 2字节国家/地区代码，如 "US"
+    text: ParsedField           # UTF-16BE 文本内容，bytesize 来自 text_length
+
+
+@dataclass
+class MultiLocalizedUnicodeType:
+    """Multi-Localized Unicode Type (mluc)"""
+    type_signature: ParsedField
+    reserved: ParsedField
+    count: ParsedField              # 记录数
+    record_size: ParsedField        # 每条记录字节数
+    records: List[MultiLocalizedUnicodeRecord]
     
     @classmethod
-    def from_bytes(cls, data: bytes) -> "MultiLocalizedUnicodeType":
+    def from_bytes(cls, data: bytes, tag_offset: int = 0) -> "MultiLocalizedUnicodeType":
         t = ICCTypes
         count = t.unpack_uint32(data[8:12])
         record_size = t.unpack_uint32(data[12:16])
@@ -351,26 +485,68 @@ class MultiLocalizedUnicodeType:
             except Exception:
                 text = ""
             
-            records.append({
-                "lang": lang_code,
-                "country": country_code,
-                "text": text,
-            })
+            records.append(MultiLocalizedUnicodeRecord(
+                language_code=ParsedField(
+                    value=lang_code,
+                    offset=tag_offset + record_offset,
+                    bytesize=2,
+                    datatype="ascii",
+                    datasize=2,
+                ),
+                country_code=ParsedField(
+                    value=country_code,
+                    offset=tag_offset + record_offset + 2,
+                    bytesize=2,
+                    datatype="ascii",
+                    datasize=2,
+                ),
+                text=ParsedField(
+                    value=text,
+                    offset=tag_offset + text_start_offset,
+                    bytesize=text_len,
+                    datatype="utf16-be",
+                    datasize=len(text),
+                ),
+            ))
         
         return cls(
-            type_signature=t.unpack_signature(data[0:4]),
-            reserved=data[4:8],
-            count=count,
-            record_size=record_size,
+            type_signature=ParsedField(
+                value=t.unpack_signature(data[0:4]),
+                offset=tag_offset,
+                bytesize=4,
+                datatype="signature",
+                datasize=4,
+            ),
+            reserved=ParsedField(
+                value=data[4:8],
+                offset=tag_offset + 4,
+                bytesize=4,
+                datatype="bytes",
+                datasize=4,
+            ),
+            count=ParsedField(
+                value=count,
+                offset=tag_offset + 8,
+                bytesize=4,
+                datatype="uint32",
+                datasize=1,
+            ),
+            record_size=ParsedField(
+                value=record_size,
+                offset=tag_offset + 12,
+                bytesize=4,
+                datatype="uint32",
+                datasize=1,
+            ),
             records=records,
         )
     
     def get_primary_text(self) -> str:
         """获取主文本（通常返回英文或第一个）"""
         for record in self.records:
-            if record["lang"] == "en":
-                return record["text"]
-        return self.records[0]["text"] if self.records else ""
+            if record.language_code.value == "en":
+                return record.text.value
+        return self.records[0].text.value if self.records else ""
 
 
 @dataclass
@@ -412,17 +588,148 @@ class S15Fixed16ArrayType:
 
 
 @dataclass
+class LutMatrix3x3:
+    """lut8/lut16 3x3 矩阵子结构。
+
+    该矩阵位于 lut8/lut16 头部之后，共 9 个 s15Fixed16Number。
+    注意它不同于 mAB/mBA 的 3x4 矩阵。
+    """
+    values: List[float]
+    rows: List[List[float]]
+
+    @classmethod
+    def from_bytes(cls, data: bytes, offset: int) -> "LutMatrix3x3":
+        """从指定偏移解析 9 个 s15Fixed16Number。"""
+        if offset + 36 > len(data):
+            raise ValueError("lut matrix exceeds data length")
+
+        values = [
+            ICCTypes.unpack_s15fixed16(data[offset + i*4:offset + (i+1)*4])
+            for i in range(9)
+        ]
+        rows = [values[i:i+3] for i in range(0, 9, 3)]
+        return cls(values=values, rows=rows)
+
+
+@dataclass
+class LutTable:
+    """lut8/lut16 输入表或输出表子结构。"""
+    values: List[int]
+    channels: int
+    entries_per_channel: int
+    bit_depth: int
+    normalized_values: List[float]
+
+    @classmethod
+    def from_uint8_bytes(
+        cls,
+        data: bytes,
+        offset: int,
+        channels: int,
+        entries_per_channel: int,
+    ) -> "LutTable":
+        """解析 uint8 LUT 表。"""
+        count = channels * entries_per_channel
+        values = list(data[offset:offset + count])
+        return cls(
+            values=values,
+            channels=channels,
+            entries_per_channel=entries_per_channel,
+            bit_depth=8,
+            normalized_values=[value / 255.0 for value in values],
+        )
+
+    @classmethod
+    def from_uint16_bytes(
+        cls,
+        data: bytes,
+        offset: int,
+        channels: int,
+        entries_per_channel: int,
+    ) -> "LutTable":
+        """解析 uint16 LUT 表。"""
+        count = channels * entries_per_channel
+        values = [
+            UINT16.unpack(data[offset + i*2:offset + i*2 + 2])[0]
+            for i in range(count)
+        ]
+        return cls(
+            values=values,
+            channels=channels,
+            entries_per_channel=entries_per_channel,
+            bit_depth=16,
+            normalized_values=[value / 65535.0 for value in values],
+        )
+
+
+@dataclass
+class LutClut:
+    """lut8/lut16 CLUT 子结构。"""
+    values: List[int]
+    grid_points: int
+    input_channels: int
+    output_channels: int
+    bit_depth: int
+    normalized_values: List[float]
+
+    @classmethod
+    def from_uint8_bytes(
+        cls,
+        data: bytes,
+        offset: int,
+        grid_points: int,
+        input_channels: int,
+        output_channels: int,
+    ) -> "LutClut":
+        """解析 uint8 CLUT。"""
+        count = grid_points ** input_channels * output_channels
+        values = list(data[offset:offset + count])
+        return cls(
+            values=values,
+            grid_points=grid_points,
+            input_channels=input_channels,
+            output_channels=output_channels,
+            bit_depth=8,
+            normalized_values=[value / 255.0 for value in values],
+        )
+
+    @classmethod
+    def from_uint16_bytes(
+        cls,
+        data: bytes,
+        offset: int,
+        grid_points: int,
+        input_channels: int,
+        output_channels: int,
+    ) -> "LutClut":
+        """解析 uint16 CLUT。"""
+        count = grid_points ** input_channels * output_channels
+        values = [
+            UINT16.unpack(data[offset + i*2:offset + i*2 + 2])[0]
+            for i in range(count)
+        ]
+        return cls(
+            values=values,
+            grid_points=grid_points,
+            input_channels=input_channels,
+            output_channels=output_channels,
+            bit_depth=16,
+            normalized_values=[value / 65535.0 for value in values],
+        )
+
+
+@dataclass
 class Lut8Type:
-    """8-bit LUT Type (lut8)"""
+    """8-bit LUT Type (mft1 / lut8)"""
     type_signature: str
     reserved: bytes
     input_channels: int
     output_channels: int
     clut_grid_points: int
-    matrix: List[float]      # 9个s15Fixed16
-    input_table: List[int]   # 256 * input_channels 字节
-    clut_values: List[int]   # 可变长度
-    output_table: List[int]  # 256 * output_channels 字节
+    matrix: LutMatrix3x3
+    input_table: LutTable
+    clut: LutClut
+    output_table: LutTable
     
     @classmethod
     def from_bytes(cls, data: bytes) -> "Lut8Type":
@@ -431,22 +738,20 @@ class Lut8Type:
         output_channels = t.unpack_uint8(data[9:10])
         clut_grid_points = t.unpack_uint8(data[10:11])
         
-        # Matrix (9个s15Fixed16)
-        matrix = []
-        for i in range(9):
-            matrix.append(t.unpack_s15fixed16(data[12 + i*4:16 + i*4]))
+        matrix = LutMatrix3x3.from_bytes(data, 12)
         
         # Input table (256 * input_channels)
         input_table_offset = 12 + 9*4
-        input_table = list(data[input_table_offset:input_table_offset + 256 * input_channels])
+        input_table = LutTable.from_uint8_bytes(data, input_table_offset, input_channels, 256)
         
-        # CLUT (clut_grid_points^3 * output_channels)
+        # CLUT (clut_grid_points^input_channels * output_channels), 规范 10.11
+        clut_entries = clut_grid_points ** input_channels * output_channels
         clut_offset = input_table_offset + 256 * input_channels
-        clut_values = list(data[clut_offset:clut_offset + clut_grid_points**3 * output_channels])
+        clut = LutClut.from_uint8_bytes(data, clut_offset, clut_grid_points, input_channels, output_channels)
         
         # Output table (256 * output_channels)
-        output_offset = clut_offset + clut_grid_points**3 * output_channels
-        output_table = list(data[output_offset:output_offset + 256 * output_channels])
+        output_offset = clut_offset + clut_entries
+        output_table = LutTable.from_uint8_bytes(data, output_offset, output_channels, 256)
         
         return cls(
             type_signature=t.unpack_signature(data[0:4]),
@@ -456,23 +761,29 @@ class Lut8Type:
             clut_grid_points=clut_grid_points,
             matrix=matrix,
             input_table=input_table,
-            clut_values=clut_values,
+            clut=clut,
             output_table=output_table,
         )
 
 
 @dataclass
 class Lut16Type:
-    """16-bit LUT Type (lut16)"""
+    """16-bit LUT Type (mft2 / lut16) - 规范 10.10 / Table 40
+
+    输入/输出表条目数为可变值 (n, m)，分别存放在字节 48-49 与 50-51。
+    输入表从偏移 52 开始。CLUT 大小 = grid^input_channels * output_channels。
+    """
     type_signature: str
     reserved: bytes
     input_channels: int
     output_channels: int
     clut_grid_points: int
-    matrix: List[float]
-    input_table: List[int]   # 4096 * input_channels 字节 (uint16)
-    clut_values: List[int]  # clut_grid_points^3 * output_channels * 2 字节
-    output_table: List[int]  # 4096 * output_channels 字节 (uint16)
+    num_input_entries: int   # n: 每通道输入表条目数
+    num_output_entries: int  # m: 每通道输出表条目数
+    matrix: LutMatrix3x3
+    input_table: LutTable
+    clut: LutClut
+    output_table: LutTable
     
     @classmethod
     def from_bytes(cls, data: bytes) -> "Lut16Type":
@@ -481,32 +792,24 @@ class Lut16Type:
         output_channels = t.unpack_uint8(data[9:10])
         clut_grid_points = t.unpack_uint8(data[10:11])
         
-        # Matrix (9个s15Fixed16)
-        matrix = []
-        for i in range(9):
-            matrix.append(t.unpack_s15fixed16(data[12 + i*4:16 + i*4]))
+        matrix = LutMatrix3x3.from_bytes(data, 12)
         
-        # Input table (4096 * input_channels 字节, uint16)
-        input_table_offset = 12 + 9*4
-        input_table = []
-        for i in range(4096 * input_channels):
-            val = UINT16.unpack(data[input_table_offset + i*2:input_table_offset + i*2 + 2])[0]
-            input_table.append(val)
+        # 可变条目数: n (偏移48-49), m (偏移50-51)
+        num_input_entries = UINT16.unpack(data[48:50])[0]
+        num_output_entries = UINT16.unpack(data[50:52])[0]
         
-        # CLUT
-        clut_offset = input_table_offset + 4096 * input_channels * 2
-        clut_count = clut_grid_points ** 3 * output_channels
-        clut_values = []
-        for i in range(clut_count):
-            val = UINT16.unpack(data[clut_offset + i*2:clut_offset + i*2 + 2])[0]
-            clut_values.append(val)
+        # Input table (n * input_channels 个 uint16, 从偏移 52 开始)
+        input_table_offset = 52
+        input_table = LutTable.from_uint16_bytes(data, input_table_offset, input_channels, num_input_entries)
         
-        # Output table
+        # CLUT (grid^input_channels * output_channels 个 uint16)
+        clut_offset = input_table_offset + num_input_entries * input_channels * 2
+        clut_count = clut_grid_points ** input_channels * output_channels
+        clut = LutClut.from_uint16_bytes(data, clut_offset, clut_grid_points, input_channels, output_channels)
+        
+        # Output table (m * output_channels 个 uint16)
         output_offset = clut_offset + clut_count * 2
-        output_table = []
-        for i in range(4096 * output_channels):
-            val = UINT16.unpack(data[output_offset + i*2:output_offset + i*2 + 2])[0]
-            output_table.append(val)
+        output_table = LutTable.from_uint16_bytes(data, output_offset, output_channels, num_output_entries)
         
         return cls(
             type_signature=t.unpack_signature(data[0:4]),
@@ -514,10 +817,107 @@ class Lut16Type:
             input_channels=input_channels,
             output_channels=output_channels,
             clut_grid_points=clut_grid_points,
+            num_input_entries=num_input_entries,
+            num_output_entries=num_output_entries,
             matrix=matrix,
             input_table=input_table,
-            clut_values=clut_values,
+            clut=clut,
             output_table=output_table,
+        )
+
+
+CurveLike = Union[CurveType, ParametricCurveType]
+
+
+@dataclass
+class LutABMatrix:
+    """mAB/mBA Matrix 子结构 - 规范 10.12.5
+
+    该矩阵不是带 type signature 的 Tag Type，而是 lutAToB/lutBToA 内部
+    通过相对偏移定位的裸数据块。共 12 个 s15Fixed16Number：
+    e1-e9 为 3x3 矩阵系数，e10-e12 为常数偏移项。
+    """
+    values: List[float]       # e1-e12, 12个 s15Fixed16Number
+    coefficients: List[float] # e1-e9, 3x3 矩阵系数
+    offsets: List[float]      # e10-e12, 常数偏移项
+
+    @classmethod
+    def from_bytes(cls, data: bytes, offset: int) -> "LutABMatrix":
+        """从完整数据中的绝对偏移解析 mAB/mBA 3x4 矩阵。"""
+        if offset + 48 > len(data):
+            raise ValueError("mAB/mBA matrix exceeds data length")
+
+        values = [
+            ICCTypes.unpack_s15fixed16(data[offset + i*4:offset + (i+1)*4])
+            for i in range(12)
+        ]
+        return cls(
+            values=values,
+            coefficients=values[:9],
+            offsets=values[9:12],
+        )
+
+
+@dataclass
+class LutABClut:
+    """mAB/mBA CLUT 子结构 - 规范 10.12.4
+
+    该 CLUT 不是带 type signature 的 Tag Type，而是 lutAToB/lutBToA 内部
+    通过相对偏移定位的裸数据块。
+    """
+    grid_points: List[int]    # 每个输入通道的网格点数
+    precision: int            # 1=uint8, 2=uint16
+    data_type: str            # "uint8" 或 "uint16"
+    values: List[float]       # 归一化后的 CLUT 值
+    input_channels: int
+    output_channels: int
+
+    @classmethod
+    def from_bytes(
+        cls,
+        data: bytes,
+        offset: int,
+        input_channels: int,
+        output_channels: int,
+    ) -> "LutABClut":
+        """从完整数据中的绝对偏移解析 mAB/mBA CLUT。"""
+        if offset + 20 > len(data):
+            raise ValueError("mAB/mBA CLUT exceeds data length")
+
+        grid_points = [
+            data[offset + i]
+            for i in range(input_channels)
+            if data[offset + i] > 0
+        ]
+        precision = data[offset + 16]
+
+        total_points = 1
+        for grid in grid_points:
+            total_points *= grid
+
+        total_values = total_points * output_channels
+        clut_data_start = offset + 20
+
+        if precision == 1:
+            raw_values = list(data[clut_data_start:clut_data_start + total_values])
+            values = [value / 255.0 for value in raw_values]
+            data_type = "uint8"
+        elif precision == 2:
+            values = []
+            for i in range(total_values):
+                raw = UINT16.unpack(data[clut_data_start + i*2:clut_data_start + i*2 + 2])[0]
+                values.append(raw / 65535.0)
+            data_type = "uint16"
+        else:
+            raise ValueError(f"Unsupported precision: {precision} (use 1 for uint8, 2 for uint16)")
+
+        return cls(
+            grid_points=grid_points,
+            precision=precision,
+            data_type=data_type,
+            values=values,
+            input_channels=input_channels,
+            output_channels=output_channels,
         )
 
 
@@ -536,11 +936,11 @@ class LutAToBType:
     offset_a_curve: int       # offset 28-31: Offset to "A" curve
     
     # 解析出的子元素数据
-    b_curve: dict = None      # B曲线 (curv/para类型)
-    matrix: List[float] = None  # 3x3矩阵 (s15Fixed16数组)
-    m_curve: dict = None     # M曲线 (curv/para类型)
-    clut: dict = None        # CLUT数据
-    a_curve: dict = None     # A曲线 (curv/para类型)
+    b_curve: Optional[CurveLike] = None       # B曲线 (curv/para类型)
+    matrix: Optional[LutABMatrix] = None      # 3x4矩阵 (12个s15Fixed16)
+    m_curve: Optional[CurveLike] = None       # M曲线 (curv/para类型)
+    clut: Optional[LutABClut] = None          # CLUT子结构
+    a_curve: Optional[CurveLike] = None       # A曲线 (curv/para类型)
     
     @classmethod
     def from_bytes(cls, data: bytes, full_data: bytes = None, tag_offset: int = 0) -> "LutAToBType":
@@ -596,20 +996,20 @@ class LutAToBType:
         return instance
     
     @staticmethod
-    def _parse_curve(data: bytes, offset: int) -> dict:
+    def _parse_curve(data: bytes, offset: int) -> CurveLike:
         """解析curve类型数据 (curv 或 para)"""
         if offset + 4 > len(data):
-            return {"error": "offset exceeds data length"}
+            raise ValueError("curve offset exceeds data length")
         
         type_sig = ICCTypes.unpack_signature(data[offset:offset+4])
         if type_sig == "curv":
-            return CurveType.from_bytes(data[offset:]).__dict__
+            return CurveType.from_bytes(data[offset:])
         elif type_sig == "para":
-            return ParametricCurveType.from_bytes(data[offset:]).__dict__
-        return {"error": f"Expected curve type, got {type_sig}"}
+            return ParametricCurveType.from_bytes(data[offset:])
+        raise ValueError(f"Expected curve type, got {type_sig}")
     
     @staticmethod
-    def _parse_clut(data: bytes, offset: int, input_channels: int, output_channels: int) -> dict:
+    def _parse_clut(data: bytes, offset: int, input_channels: int, output_channels: int) -> LutABClut:
         """解析CLUT数据 - 基于 ICC.1:2022 Table 45
         
         CLUT 结构：
@@ -618,66 +1018,15 @@ class LutAToBType:
         - offset + 17-19: reserved (3个字节, 0x00)
         - offset + 20+: CLUTData (gridPoints^input_channels * output_channels 个值)
         """
-        if offset + 20 > len(data):
-            return {"error": "offset exceeds data length"}
-        
-        result = {}
-        
-        # 读取网格点数 (图表 45: gridPointsArray 在前 16 字节,取 input_channels 个值)
-        grid_points_list = []
-        for i in range(input_channels):
-            gp = data[offset + i]
-            if gp > 0:
-                grid_points_list.append(gp)
-        
-        result["grid_points"] = grid_points_list
-        result["input_channels"] = input_channels
-        result["output_channels"] = output_channels
-        
-        # Precision byte at offset + 16
-        precision = data[offset + 16]
-        result["precision"] = precision
-        
-        # CLUT data starts at offset + 20
-        clut_data_start = offset + 20
-        
-        # 计算总点数
-        total_points = 1
-        for g in grid_points_list:
-            total_points *= g
-        
-        total_values = total_points * output_channels
-        
-        # 读取 CLUT 数据
-        if precision == 1:
-            # uint8 (uInt8Number 按 0-255 表示 0.0-1.0)
-            clut_raw = list(data[clut_data_start:clut_data_start + total_values])
-            result["values"] = [v / 255.0 for v in clut_raw]
-            result["data_type"] = "uint8"
-        elif precision == 2:
-            # uint16 (uInt16Number 按 0-65535 表示 0.0-1.0)
-            values = []
-            for i in range(total_values):
-                val = UINT16.unpack(data[clut_data_start + i*2:clut_data_start + i*2 + 2])[0]
-                values.append(val / 65535.0)
-            result["values"] = values
-            result["data_type"] = "uint16"
-        else:
-            # 其他精度值不支持
-            result["error"] = f"Unsupported precision: {precision} (use 1 for uint8, 2 for uint16)"
-        
-        return result
+        return LutABClut.from_bytes(data, offset, input_channels, output_channels)
     
     @staticmethod
-    def _parse_matrix(data: bytes, offset: int) -> List[float]:
-        """解析3x3矩阵 (9个s15Fixed16)"""
-        if offset + 36 > len(data):
-            return []
-        
-        matrix = []
-        for i in range(9):
-            matrix.append(ICCTypes.unpack_s15fixed16(data[offset + i*4:offset + (i+1)*4]))
-        return matrix
+    def _parse_matrix(data: bytes, offset: int) -> LutABMatrix:
+        """解析 mAB/mBA 矩阵 (规范 10.12.5: 3x4 数组, e1-e12, 共48字节)
+
+        e1-e9 为 3x3 矩阵系数, e10-e12 为偏移项 (常数项)。
+        """
+        return LutABMatrix.from_bytes(data, offset)
 
 
 @dataclass
@@ -707,20 +1056,44 @@ class MeasurementType:
 
 # ==================== Tag Type 注册表 ====================
 
+@dataclass
+class DateTimeType:
+    """dateTimeType (dtim) - 规范 10.8 / Table 38
+
+    数据部分为 1 个 dateTimeNumber (12字节, 6个uint16)。
+    """
+    type_signature: str
+    reserved: bytes
+    value: str   # ISO 格式时间字符串
+
+    @classmethod
+    def from_bytes(cls, data: bytes) -> "DateTimeType":
+        t = ICCTypes
+        return cls(
+            type_signature=t.unpack_signature(data[0:4]),
+            reserved=data[4:8],
+            value=t.unpack_datetime(data[8:20]).isoformat(),
+        )
+
+
 TAG_TYPE_PARSERS = {
     "XYZ ": XYZType.from_bytes,
     "curv": CurveType.from_bytes,
     "para": ParametricCurveType.from_bytes,
     "text": TextType.from_bytes,
+    "desc": TextDescriptionType.from_bytes,
     "mluc": MultiLocalizedUnicodeType.from_bytes,
     "sig ": SignatureType.from_bytes,
     "sf32": S15Fixed16ArrayType.from_bytes,
-    "lut8": Lut8Type.from_bytes,
-    "lut16": Lut16Type.from_bytes,
+    "mft1": Lut8Type.from_bytes,
+    "mft2": Lut16Type.from_bytes,
+    "lut8": Lut8Type.from_bytes,   # 兼容旧命名
+    "lut16": Lut16Type.from_bytes,  # 兼容旧命名（真实 type signature 为4字节，通常是 mft2）
     "mAB ": LutAToBType.from_bytes,
     "mBA ": LutAToBType.from_bytes,
     "clrt": ColorantTableType.from_bytes,
     "meas": MeasurementType.from_bytes,
+    "dtim": DateTimeType.from_bytes,
 }
 
 
@@ -732,6 +1105,8 @@ def parse_tag_type(data: bytes, type_sig: str, full_data: bytes = None, tag_offs
             # 对于 LutAToB/B 类型，传入完整数据和偏移量以便计算子元素位置
             if type_sig in ("mAB ", "mBA ") and full_data is not None:
                 return parser(data, full_data, tag_offset)
+            if type_sig == "mluc":
+                return parser(data, tag_offset=tag_offset)
             return parser(data)
         except Exception as e:
             return {"error": str(e), "raw_data": data.hex()}
